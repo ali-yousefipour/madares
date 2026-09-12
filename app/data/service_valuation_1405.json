@@ -1,0 +1,314 @@
+{
+  "source": "تاکسیرانی-خروجی_هیات_تطبیق-14041128(1) (1).xlsx",
+  "year": "1405-1406",
+  "distance_basis": "رفت و برگشت",
+  "classes": [
+    {
+      "key": "economy",
+      "title": "پراید، آردی و روآ",
+      "brackets": [
+        {
+          "distance_km": 3.0,
+          "driver_1405_riyal": 10000000.0,
+          "parent_monthly_riyal": 12090568.518518519
+        },
+        {
+          "distance_km": 4.0,
+          "driver_1405_riyal": 11000000.0,
+          "parent_monthly_riyal": 13287148.518518519
+        },
+        {
+          "distance_km": 5.0,
+          "driver_1405_riyal": 12500000.0,
+          "parent_monthly_riyal": 15082018.518518517
+        },
+        {
+          "distance_km": 6.0,
+          "driver_1405_riyal": 13500000.0,
+          "parent_monthly_riyal": 16278598.518518517
+        },
+        {
+          "distance_km": 7.0,
+          "driver_1405_riyal": 14500000.0,
+          "parent_monthly_riyal": 17475178.51851852
+        },
+        {
+          "distance_km": 8.0,
+          "driver_1405_riyal": 15500000.0,
+          "parent_monthly_riyal": 18671758.518518522
+        },
+        {
+          "distance_km": 9.0,
+          "driver_1405_riyal": 16500000.0,
+          "parent_monthly_riyal": 19868338.518518522
+        },
+        {
+          "distance_km": 10.0,
+          "driver_1405_riyal": 17500000.0,
+          "parent_monthly_riyal": 21064918.518518522
+        },
+        {
+          "distance_km": 11.0,
+          "driver_1405_riyal": 18000000.0,
+          "parent_monthly_riyal": 21663208.518518522
+        },
+        {
+          "distance_km": 12.0,
+          "driver_1405_riyal": 19000000.0,
+          "parent_monthly_riyal": 22859788.518518522
+        },
+        {
+          "distance_km": 13.0,
+          "driver_1405_riyal": 20000000.0,
+          "parent_monthly_riyal": 24056368.518518522
+        },
+        {
+          "distance_km": 14.0,
+          "driver_1405_riyal": 21000000.0,
+          "parent_monthly_riyal": 25252948.518518522
+        },
+        {
+          "distance_km": 15.0,
+          "driver_1405_riyal": 21500000.0,
+          "parent_monthly_riyal": 25851238.518518522
+        },
+        {
+          "distance_km": 16.0,
+          "driver_1405_riyal": 22500000.0,
+          "parent_monthly_riyal": 27047818.518518522
+        },
+        {
+          "distance_km": 17.0,
+          "driver_1405_riyal": 23500000.0,
+          "parent_monthly_riyal": 28244398.518518522
+        },
+        {
+          "distance_km": 18.0,
+          "driver_1405_riyal": 24000000.0,
+          "parent_monthly_riyal": 28842688.518518522
+        },
+        {
+          "distance_km": 19.0,
+          "driver_1405_riyal": 25000000.0,
+          "parent_monthly_riyal": 30039268.518518522
+        },
+        {
+          "distance_km": 20.0,
+          "driver_1405_riyal": 26000000.0,
+          "parent_monthly_riyal": 31235848.518518522
+        }
+      ],
+      "extra_driver_riyal_per_km": 680000
+    },
+    {
+      "key": "standard",
+      "title": "سمند، اطلس، کوئیک، تیبا و مشابه",
+      "brackets": [
+        {
+          "distance_km": 3.0,
+          "driver_1405_riyal": 11000000.0,
+          "parent_monthly_riyal": 13287148.518518519
+        },
+        {
+          "distance_km": 4.0,
+          "driver_1405_riyal": 12500000.0,
+          "parent_monthly_riyal": 15082018.518518517
+        },
+        {
+          "distance_km": 5.0,
+          "driver_1405_riyal": 14000000.0,
+          "parent_monthly_riyal": 16876888.51851852
+        },
+        {
+          "distance_km": 6.0,
+          "driver_1405_riyal": 15000000.0,
+          "parent_monthly_riyal": 18073468.51851852
+        },
+        {
+          "distance_km": 7.0,
+          "driver_1405_riyal": 16500000.0,
+          "parent_monthly_riyal": 19868338.518518522
+        },
+        {
+          "distance_km": 8.0,
+          "driver_1405_riyal": 18000000.0,
+          "parent_monthly_riyal": 21663208.518518522
+        },
+        {
+          "distance_km": 9.0,
+          "driver_1405_riyal": 19500000.0,
+          "parent_monthly_riyal": 23458078.518518522
+        },
+        {
+          "distance_km": 10.0,
+          "driver_1405_riyal": 20000000.0,
+          "parent_monthly_riyal": 24056368.518518522
+        },
+        {
+          "distance_km": 11.0,
+          "driver_1405_riyal": 20500000.0,
+          "parent_monthly_riyal": 24654658.518518522
+        },
+        {
+          "distance_km": 12.0,
+          "driver_1405_riyal": 22000000.0,
+          "parent_monthly_riyal": 26449528.518518522
+        },
+        {
+          "distance_km": 13.0,
+          "driver_1405_riyal": 23500000.0,
+          "parent_monthly_riyal": 28244398.518518522
+        },
+        {
+          "distance_km": 14.0,
+          "driver_1405_riyal": 24500000.0,
+          "parent_monthly_riyal": 29440978.518518522
+        },
+        {
+          "distance_km": 15.0,
+          "driver_1405_riyal": 25000000.0,
+          "parent_monthly_riyal": 30039268.518518522
+        },
+        {
+          "distance_km": 16.0,
+          "driver_1405_riyal": 26000000.0,
+          "parent_monthly_riyal": 31235848.518518522
+        },
+        {
+          "distance_km": 17.0,
+          "driver_1405_riyal": 27500000.0,
+          "parent_monthly_riyal": 33030718.518518522
+        },
+        {
+          "distance_km": 18.0,
+          "driver_1405_riyal": 28500000.0,
+          "parent_monthly_riyal": 34227298.51851852
+        },
+        {
+          "distance_km": 19.0,
+          "driver_1405_riyal": 29000000.0,
+          "parent_monthly_riyal": 34825588.51851852
+        },
+        {
+          "distance_km": 20.0,
+          "driver_1405_riyal": 30000000.0,
+          "parent_monthly_riyal": 36022168.51851852
+        }
+      ],
+      "extra_driver_riyal_per_km": 820000
+    },
+    {
+      "key": "van",
+      "title": "ون و مینی‌بوس",
+      "brackets": [
+        {
+          "distance_km": 3.0,
+          "driver_1405_riyal": 7000000.0,
+          "parent_monthly_riyal": 8500828.518518519
+        },
+        {
+          "distance_km": 4.0,
+          "driver_1405_riyal": 8500000.0,
+          "parent_monthly_riyal": 10295698.518518519
+        },
+        {
+          "distance_km": 5.0,
+          "driver_1405_riyal": 9500000.0,
+          "parent_monthly_riyal": 11492278.518518519
+        },
+        {
+          "distance_km": 6.0,
+          "driver_1405_riyal": 10800000.0,
+          "parent_monthly_riyal": 13047832.518518519
+        },
+        {
+          "distance_km": 7.0,
+          "driver_1405_riyal": 11000000.0,
+          "parent_monthly_riyal": 13287148.518518519
+        },
+        {
+          "distance_km": 8.0,
+          "driver_1405_riyal": 12500000.0,
+          "parent_monthly_riyal": 15082018.518518517
+        },
+        {
+          "distance_km": 9.0,
+          "driver_1405_riyal": 13500000.0,
+          "parent_monthly_riyal": 16278598.518518517
+        },
+        {
+          "distance_km": 10.0,
+          "driver_1405_riyal": 14000000.0,
+          "parent_monthly_riyal": 16876888.51851852
+        },
+        {
+          "distance_km": 11.0,
+          "driver_1405_riyal": 15000000.0,
+          "parent_monthly_riyal": 18073468.51851852
+        },
+        {
+          "distance_km": 12.0,
+          "driver_1405_riyal": 15000000.0,
+          "parent_monthly_riyal": 18073468.51851852
+        },
+        {
+          "distance_km": 13.0,
+          "driver_1405_riyal": 16500000.0,
+          "parent_monthly_riyal": 19868338.518518522
+        },
+        {
+          "distance_km": 14.0,
+          "driver_1405_riyal": 16500000.0,
+          "parent_monthly_riyal": 19868338.518518522
+        },
+        {
+          "distance_km": 15.0,
+          "driver_1405_riyal": 18000000.0,
+          "parent_monthly_riyal": 21663208.518518522
+        },
+        {
+          "distance_km": 16.0,
+          "driver_1405_riyal": 18000000.0,
+          "parent_monthly_riyal": 21663208.518518522
+        },
+        {
+          "distance_km": 17.0,
+          "driver_1405_riyal": 19500000.0,
+          "parent_monthly_riyal": 23458078.518518522
+        },
+        {
+          "distance_km": 18.0,
+          "driver_1405_riyal": 19500000.0,
+          "parent_monthly_riyal": 23458078.518518522
+        },
+        {
+          "distance_km": 19.0,
+          "driver_1405_riyal": 20500000.0,
+          "parent_monthly_riyal": 24654658.518518522
+        },
+        {
+          "distance_km": 20.0,
+          "driver_1405_riyal": 20500000.0,
+          "parent_monthly_riyal": 24654658.518518522
+        }
+      ],
+      "extra_driver_riyal_per_km": 580000
+    }
+  ],
+  "traffic_by_district": {
+    "1": 0,
+    "2": 0.1,
+    "3": 0.25,
+    "4": 0.25,
+    "5": 0.1,
+    "6": 0.25,
+    "7": 0.1,
+    "8": 0
+  },
+  "notes": [
+    "مسافت سرویس برای هر دانش آموز به صورت میانگین مسیر رفت و برگشت منزل تا آموزشگاه محاسبه می‌شود.",
+    "ضریب ترافیک نواحی 2،5،7 برابر 10 درصد و نواحی 3،4،6 برابر 25 درصد است.",
+    "برای مسافت بیش از 20 کیلومتر، مبلغ افزوده برای هر کیلومتر اضافه به بهای خدمات راننده اعمال می‌شود.",
+    "بهای خدمات ماهیانه پرداختی اولیاء از جدول اکسل به عنوان مبنای خروجی استفاده می‌شود و در صورت اعمال ضریب ترافیک، اجزای وابسته به بهای خدمات راننده نیز متناسب محاسبه می‌شوند."
+  ]
+}

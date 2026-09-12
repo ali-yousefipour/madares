@@ -1,0 +1,6 @@
+# جلوگیری از اجرای اسکریپت داخل پوشهٔ آپلودها (فقط فایل تصویری سرو می‌شود)
+<FilesMatch "\.(php|phtml|php5|pl|py|cgi|sh)$">
+  Require all denied
+</FilesMatch>
+Options -ExecCGI
+php_flag engine off
