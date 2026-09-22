@@ -758,15 +758,28 @@ function schoolPopupHtml(s){
   const photoHtml=photo?`<img src="${esc(photo)}" alt="تصویر سردر ${esc(s.name||'مدرسه')}" loading="lazy" style="width:100%;height:130px;object-fit:cover;border-radius:10px;margin-bottom:8px;border:1px solid var(--line)" onerror="this.style.display='none'">`:'';
   return `<div class="schoolPopup">${photoHtml}<b>${esc(s.name)}</b><br>مقطع: ${esc(s.level||'—')}<br>جنسیت: ${esc(s.gender||'—')}<br>شرکت سرویس‌دهنده: ${esc(s.company_title||'—')}<br>آدرس مدرسه: ${esc(s.address||'—')}<br><button class="btn sm" onclick="showCompanyInfo(${s.company_id})">نمایش اطلاعات شرکت</button></div>`;
 }
-function showSchoolCompanyOnMap(s){
+async function showSchoolCompanyOnMap(s){
   if(!s || !s.company_id || !s.company_lat || !s.company_lng) return;
   publicMapReady();
   COMPANY_MARKERS.forEach(x=>{ try{ PUBLIC_MAP.raw.removeLayer(x); }catch(e){} });
   COMPANY_MARKERS=[];
-  const cm=PUBLIC_MAP.addMarker(s.company_lat,s.company_lng,companyPopupHtml({id:s.company_id,title:s.company_title}),'#f6b400','🏢');
+  let details={};
+  try{ details=await publicApi('/public/company/'+s.company_id); }catch(e){ details={}; }
+  const data={id:s.company_id,title:s.company_title,...details};
+  const cm=PUBLIC_MAP.addMarker(s.company_lat,s.company_lng,companyPopupHtml(data),'#f6b400','🏢');
   cm.__companyId=s.company_id;
-  cm.on('click',()=>loadCompanyMarkerInfo(cm,s.company_id,{id:s.company_id,title:s.company_title}));
+  cm.__company=data;
+  cm.on('click',async()=>{
+    try{
+      const fresh=await publicApi('/public/company/'+s.company_id);
+      cm.__company={...data,...fresh};
+      cm.setPopupContent(companyPopupHtml(cm.__company));
+      cm.openPopup();
+    }catch(e){}
+  });
   COMPANY_MARKERS.push(cm);
+  PUBLIC_MAP.raw.setView([s.company_lat,s.company_lng],16);
+  cm.openPopup();
 }
 function renderSchoolMarkers(rows, fit=false){
   publicMapReady(); clearPublicLayers({keepRoute:true});
@@ -801,9 +814,18 @@ async function loadCompanyMarkerInfo(marker,id,base){
   if(!id)return;
   try{
     const details=await publicApi('/public/company/'+id);
-    marker.setPopupContent(companyPopupHtml({...base,...details}));
+    const data={...base,...details};
+    marker.__company=data;
+    marker.setPopupContent(companyPopupHtml(data));
     marker.openPopup();
   }catch(e){ toast(e.message,true); }
+}
+async function showCompanyInfo(id){
+  if(!id)return;
+  try{
+    const c=await publicApi('/public/company/'+id);
+    showModal(`<h3>${esc(c.title||'شرکت')}</h3><div class="companyInfoModal"><div>مدیرعامل: ${esc(c.manager_name||'—')}</div><div>موبایل مدیرعامل: ${esc(c.ceo_mobile||'—')}</div><div>تلفن ثابت: ${esc(c.phone||'—')}</div><div>آدرس: ${esc(c.address||'—')}</div></div>`);
+  }catch(e){toast(e.message,true)}
 }
 function showCompanyOnPublicMap(lat,lng,title){ publicMapReady(); clearPublicLayers({keepRoute:true}); const m=PUBLIC_MAP.addMarker(lat,lng, `<div class="companyMarkerPopup"><b>🏢 ${esc(title)}</b></div>`, '#f6b400','🏢'); COMPANY_MARKERS=[m]; PUBLIC_MAP.raw.setView([lat,lng],16); m.openPopup(); }
 function selectSchoolForCost(id){ document.getElementById('calcSchool').value=String(id); focusCalcSchoolOnMap(); }
