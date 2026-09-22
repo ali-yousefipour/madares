@@ -744,28 +744,31 @@ function schoolPopupHtml(s){
   const photoHtml=photo?`<img src="${esc(photo)}" alt="تصویر سردر ${esc(s.name||'مدرسه')}" loading="lazy" style="width:100%;height:130px;object-fit:cover;border-radius:10px;margin-bottom:8px;border:1px solid var(--line)" onerror="this.style.display='none'">`:'';
   return `<div class="schoolPopup">${photoHtml}<b>${esc(s.name)}</b><br>مقطع: ${esc(s.level||'—')}<br>جنسیت: ${esc(s.gender||'—')}<br>شرکت سرویس‌دهنده: ${esc(s.company_title||'—')}<br>آدرس مدرسه: ${esc(s.address||'—')}<br><button class="btn sm" onclick="showCompanyInfo(${s.company_id})">نمایش اطلاعات شرکت</button></div>`;
 }
+function showSchoolCompanyOnMap(s){
+  if(!s || !s.company_id || !s.company_lat || !s.company_lng) return;
+  publicMapReady();
+  COMPANY_MARKERS.forEach(x=>{ try{ PUBLIC_MAP.raw.removeLayer(x); }catch(e){} });
+  COMPANY_MARKERS=[];
+  const cm=PUBLIC_MAP.addMarker(s.company_lat,s.company_lng,companyPopupHtml({id:s.company_id,title:s.company_title}),'#f6b400','🏢');
+  cm.__companyId=s.company_id;
+  COMPANY_MARKERS.push(cm);
+}
 function renderSchoolMarkers(rows, fit=false){
   publicMapReady(); clearPublicLayers({keepRoute:true});
-  const seenCompanies = new Set();
   rows.forEach(s=>{
     if(s.lat && s.lng){
-      const m = PUBLIC_MAP.addMarker(s.lat, s.lng, schoolPopupHtml(s), '#0e8a6a', schoolMarkerVisual(s));
-      m.__schoolId = s.id; m.__school = s; PUBLIC_MARKERS.push(m);
-    }
-    // موقعیت مکانی شرکت ارائه‌دهندهٔ سرویس همین مدرسه نیز روی نقشه نمایش داده می‌شود
-    if(s.company_id && s.company_lat && s.company_lng && !seenCompanies.has(String(s.company_id))){
-      seenCompanies.add(String(s.company_id));
-      const cm = PUBLIC_MAP.addMarker(s.company_lat, s.company_lng, companyPopupHtml({id:s.company_id, title:s.company_title}), '#f6b400', '🏢');
-      cm.__companyId = s.company_id; COMPANY_MARKERS.push(cm);
+      const m=PUBLIC_MAP.addMarker(s.lat,s.lng,schoolPopupHtml(s),'#0e8a6a',schoolMarkerVisual(s));
+      m.__schoolId=s.id; m.__school=s;
+      m.on('click',()=>showSchoolCompanyOnMap(s));
+      PUBLIC_MARKERS.push(m);
     }
   });
-  const all=[...PUBLIC_MARKERS, ...COMPANY_MARKERS];
-  if(fit && all.length){ try{ PUBLIC_MAP.raw.fitBounds(L.featureGroup(all).getBounds(), {padding:[35,35]}); }catch(e){} }
+  if(fit && PUBLIC_MARKERS.length){ try{ PUBLIC_MAP.raw.fitBounds(L.featureGroup(PUBLIC_MARKERS).getBounds(), {padding:[35,35]}); }catch(e){} }
 }
 function focusPublicSchool(id){
-  let m = PUBLIC_MARKERS.find(x=>String(x.__schoolId)===String(id));
-  if(!m){ const s=(ALL_PUBLIC_SCHOOLS||[]).find(x=>String(x.id)===String(id)); if(s){ renderSchoolMarkers([s], true); m=PUBLIC_MARKERS[0]; } }
-  if(m){ PUBLIC_MAP.raw.setView(m.getLatLng(), 16); m.openPopup(); }
+  let m=PUBLIC_MARKERS.find(x=>String(x.__schoolId)===String(id));
+  if(!m){ const s=(ALL_PUBLIC_SCHOOLS||[]).find(x=>String(x.id)===String(id)); if(s){ renderSchoolMarkers([s],true); m=PUBLIC_MARKERS[0]; } }
+  if(m){ PUBLIC_MAP.raw.setView(m.getLatLng(),16); m.openPopup(); }
 }
 function companyPopupHtml(c){ return `<div class="companyMarkerPopup"><b>🏢 ${esc(c.title||'')}</b><br>شرکت سرویس‌دهندهٔ مدرسه<br><button class="btn sm" onclick="showCompanyInfo(${c.id})">اطلاعات کامل شرکت</button></div>`; }
 async function showCompanyInfo(id){
