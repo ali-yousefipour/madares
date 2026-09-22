@@ -742,7 +742,7 @@ function schoolMarkerVisual(s){const photo=schoolPhotoUrl(s);return schoolPhotoM
 function schoolPopupHtml(s){
   const photo=schoolPhotosVisible()?schoolPhotoUrl(s):'';
   const photoHtml=photo?`<img src="${esc(photo)}" alt="تصویر سردر ${esc(s.name||'مدرسه')}" loading="lazy" style="width:100%;height:130px;object-fit:cover;border-radius:10px;margin-bottom:8px;border:1px solid var(--line)" onerror="this.style.display='none'">`:'';
-  return `<div class="schoolPopup">${photoHtml}<b>${esc(s.name)}</b><br>مقطع: ${esc(s.level||'—')}<br>جنسیت: ${esc(s.gender||'—')}<br>تعداد دانش‌آموزان: ${esc(s.student_count ?? '—')}<br>تعداد رانندگان: ${esc(s.driver_count ?? '—')}<br>شرکت سرویس‌دهنده: ${esc(s.company_title||'—')}<br>آدرس مدرسه: ${esc(s.address||'—')}<br><button class="btn sm" onclick="showCompanyInfo(${s.company_id})">اطلاعات بیشتر</button><button class="btn sm secondary" onclick="selectSchoolForCost(${s.id})">محاسبه مسیر</button></div>`;
+  return `<div class="schoolPopup">${photoHtml}<b>${esc(s.name)}</b><br>مقطع: ${esc(s.level||'—')}<br>جنسیت: ${esc(s.gender||'—')}<br>شرکت سرویس‌دهنده: ${esc(s.company_title||'—')}<br>آدرس مدرسه: ${esc(s.address||'—')}<br><button class="btn sm" onclick="showCompanyInfo(${s.company_id})">نمایش اطلاعات شرکت</button></div>`;
 }
 function renderSchoolMarkers(rows, fit=false){
   publicMapReady(); clearPublicLayers({keepRoute:true});
