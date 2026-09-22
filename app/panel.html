@@ -57,6 +57,11 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold-2);
 .btn.danger{background:var(--danger);color:#fff;box-shadow:none}
 .btn.sm{padding:6px 12px;font-size:12px;border-radius:8px}
 .hidden{display:none !important}
+.feature-gated{display:none !important}
+.feature-gated:not(.hidden){display:block !important}
+.feature-public-school-map#publicMap{display:block !important}
+.public-map-disabled .publicFilters{display:none}
+
 
 
 
@@ -372,21 +377,21 @@ table{border-spacing:0 7px;border-collapse:separate}thead th{background:#eef3f9;
       <select id="pubGender"><option value="">همه جنسیت‌ها</option><option>پسرانه</option><option>دخترانه</option><option>دخترانه و پسرانه</option></select>
       <button class="btn" onclick="loadPublicSchools()">جستجو</button>
     </div>
-    <div class="publicMapActions">
+    <div class="publicMapActions feature-gated feature-public-school-map">
       <button class="btn secondary" onclick="clearPublicRoute()">پاک کردن مسیر</button>
     </div>
     <div class="unifiedMapGrid">
       <div>
-        <div id="publicMap"></div>
-        <div class="routeLegend"><span><i style="background:#d23a3a"></i>منزل</span><span><i style="background:#0e8a6a"></i>مدرسه</span><span><i style="background:#f6b400"></i>شرکت</span><span><i style="background:#0d7a5f;border-radius:2px;height:4px"></i>مسیر خیابانی نشان</span></div>
-        <div class="calcHint">برای تعیین منزل، دکمه GPS را بزنید یا مستقیماً روی همین نقشه کلیک کنید. مسیر و فاصله بر اساس مسیر خودرویی در خیابان‌ها و API نشان محاسبه می‌شود.</div>
+        <div id="publicMap" class="feature-gated feature-public-school-map"></div>
+        <div class="routeLegend feature-gated feature-public-school-map"><span><i style="background:#d23a3a"></i>منزل</span><span><i style="background:#0e8a6a"></i>مدرسه</span><span><i style="background:#f6b400"></i>شرکت</span><span><i style="background:#0d7a5f;border-radius:2px;height:4px"></i>مسیر خیابانی نشان</span></div>
+        <div class="calcHint feature-gated feature-public-school-map">برای تعیین منزل، دکمه GPS را بزنید یا مستقیماً روی همین نقشه کلیک کنید. مسیر و فاصله بر اساس مسیر خودرویی در خیابان‌ها و API نشان محاسبه می‌شود.</div>
       </div>
       <div class="unifiedSide">
         <div class="sideBox">
           <h3>نتایج مدارس</h3>
-          <div class="publicResults" id="publicResults">برای مشاهدهٔ نتیجه، نام مدرسه موردنظر را جستجو کنید.</div>
+          <div class="publicResults feature-gated feature-public-school-map" id="publicResults">برای مشاهدهٔ نتیجه، نام مدرسه موردنظر را جستجو کنید.</div>
         </div>
-        <div class="sideBox" id="publicCostBox">
+        <div class="sideBox feature-gated feature-public-cost-map" id="publicCostBox">
           <h3>محاسبه هزینه سرویس حمل و نقل دانش آموزی</h3>
           <div class="field"><label>مدرسه مورد نظر</label><select id="calcSchool"><option value="">ابتدا مدرسه را جستجو و انتخاب کنید</option></select></div>
           <div class="field"><label>کلاس خودرو</label><select id="calcVehicleClass"><option value="">انتخاب کلاس خودرو</option></select></div>
@@ -402,7 +407,7 @@ table{border-spacing:0 7px;border-collapse:separate}thead th{background:#eef3f9;
           <div class="mapStatus" id="homePointStatus">مکان منزل هنوز تعیین نشده است.</div>
           <div id="calcResult" class="calcResult"></div>
         </div>
-        <div class="sideBox" id="publicQuickCostBox">
+        <div class="sideBox feature-gated feature-public-cost-quick" id="publicQuickCostBox">
           <h3>محاسبه سریع هزینه سرویس حمل و نقل دانش‌آموزی</h3>
           <div class="calcHint">ناحیهٔ آموزش و پرورش، کلاس خودرو و مسافت را وارد کنید و دکمهٔ محاسبه را بزنید.</div>
           <div class="field"><label>ناحیهٔ آموزش و پرورش</label><select id="quickCalcDistrict"><option value="">انتخاب ناحیه</option></select></div>
@@ -659,11 +664,20 @@ function clearPublicRoute(showMsg=true){
   if(showMsg){ const r=document.getElementById('calcResult'); if(r){r.style.display='none'; r.textContent='';} }
 }
 function publicFeatureEnabled(key){ return !!(CACHE.appConfig?.features?.[key]?.enabled ?? true); }
+function setPublicFeatureVisibility(selector,enabled){
+  document.querySelectorAll(selector).forEach(el=>{
+    el.classList.toggle('hidden',!enabled);
+    el.setAttribute('aria-hidden',enabled?'false':'true');
+  });
+}
 function applyPublicFeatureFlags(){
   const f=(CACHE.appConfig&&CACHE.appConfig.features)||{};
-  const enabled=(k)=>!!(f[k]?.enabled ?? true);
-  const costBox=document.getElementById('publicCostBox'); if(costBox) costBox.style.display=enabled('public_cost_calculator_map')?'':'none';
-  const quickCostBox=document.getElementById('publicQuickCostBox'); if(quickCostBox) quickCostBox.style.display=enabled('public_cost_calculator_quick')?'':'none';
+  const enabled=(k)=>!!(f[k]?.enabled ?? false);
+  setPublicFeatureVisibility('.feature-public-school-map',enabled('public_school_map'));
+  setPublicFeatureVisibility('.feature-public-cost-map',enabled('public_cost_calculator_map'));
+  setPublicFeatureVisibility('.feature-public-cost-quick',enabled('public_cost_calculator_quick'));
+  const publicPanel=document.getElementById('publicUnifiedPanel');
+  if(publicPanel) publicPanel.classList.toggle('public-map-disabled',!enabled('public_school_map'));
 }
 async function bootPublic(){
   showPublic();
