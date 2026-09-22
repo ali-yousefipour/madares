@@ -35,11 +35,11 @@ class Sms
             'http' => [
                 'user_agent' => 'Mozilla/5.0 (compatible; TaxiSystem-SMS/1.0)',
                 'header' => "Accept: text/xml, application/xml\r\n",
-                'timeout' => 25,
+                'timeout' => 8,
             ],
         ]);
         return [
-            'connection_timeout' => 25,
+            'connection_timeout' => 8,
             'cache_wsdl' => WSDL_CACHE_NONE,
             'trace' => 1,
             'exceptions' => true,
@@ -55,25 +55,24 @@ class Sms
             throw new \Exception('افزونهٔ SOAP در سرور فعال نیست (php-soap).');
         }
         $opts = self::baseOptions();
-        $wsdl = self::cfg('sms_wsdl', self::DEFAULT_WSDL);
+        $configured = trim((string)self::cfg('sms_wsdl', ''));
 
-        // تلاش اول: WSDL تنظیم‌شده/پیش‌فرض (آنلاین)
-        try {
-            return new \SoapClient($wsdl, $opts);
-        } catch (\Throwable $e) {
-            $online_err = $e->getMessage();
-        }
-        // تلاش دوم: فایل WSDL محلی (همراهِ نرم‌افزار) با آدرس زندهٔ سرویس
-        // این حالت زمانی به کار می‌آید که سرور WSDL را برنگرداند یا گواهی SSL مشکل داشته باشد.
+        // فایل WSDL محلی همراه پروژه پایدارتر است و وابستگی به دانلود WSDL را حذف می‌کند.
         if (is_file(self::LOCAL_WSDL)) {
             try {
                 $opts['location'] = self::LIVE_ENDPOINT;
                 return new \SoapClient(self::LOCAL_WSDL, $opts);
-            } catch (\Throwable $e2) {
-                throw new \Exception('اتصال به وب‌سرویس پیامک ناموفق بود: ' . ($online_err ?? $e2->getMessage()));
+            } catch (\Throwable $e) {
+                $localErr = $e->getMessage();
             }
         }
-        throw new \Exception('بارگذاری WSDL ناموفق بود: ' . ($online_err ?? 'نامشخص'));
+
+        $wsdl = $configured !== '' ? $configured : self::DEFAULT_WSDL;
+        try {
+            return new \SoapClient($wsdl, $opts);
+        } catch (\Throwable $e) {
+            throw new \Exception('اتصال به وب‌سرویس پیامک ناموفق بود: ' . ($localErr ?? $e->getMessage()));
+        }
     }
 
     private static function user() { return (string)self::cfg('sms_username'); }
@@ -89,6 +88,7 @@ class Sms
     public static function send($mobiles, $message, $kind = null, $sentBy = null)
     {
         $mobiles = is_array($mobiles) ? array_values(array_filter(array_map('trim', $mobiles))) : [trim($mobiles)];
+        $mobiles = array_values(array_filter(array_map(function($m){ $m=preg_replace('/\D+/', '', (string)$m); if(strpos($m,'98')===0 && strlen($m)===12) $m='0'.substr($m,2); return $m; }, $mobiles), fn($m)=>preg_match('/^09\d{9}$/',$m)));
         if (!$mobiles) return ['ok' => false, 'error' => 'شماره‌ای برای ارسال وجود ندارد'];
         if (trim((string)$message) === '') return ['ok' => false, 'error' => 'متن پیامک خالی است'];
         if (!self::isEnabled()) return ['ok' => false, 'error' => 'سرویس پیامک فعال یا تنظیم نشده است'];
@@ -117,7 +117,9 @@ class Sms
             // متد اصلی و غیرمنسوخِ WSDL: SendSms(pUsername,pPassword,messages[],mobiles[])
             $resp = $client->SendSms([
                 'pUsername' => self::user(), 'pPassword' => self::pass(),
-                'messages' => [$message], 'mobiles' => $mobiles,
+                // WSDL برای آرایه‌ها عنصر داخلی string تعریف کرده است.
+                'messages' => ['string' => [(string)$message]],
+                'mobiles' => ['string' => $mobiles],
             ]);
             $result = isset($resp->SendSmsResult) ? (float)$resp->SendSmsResult : -999;
             $ids = self::longArray($resp->pMessageIds ?? null);
