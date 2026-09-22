@@ -1,7 +1,24 @@
 <?php
 class Http {
   public static function body() {
+    $max = 12 * 1024 * 1024;
+    $len = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
+    $ctype = strtolower($_SERVER['CONTENT_TYPE'] ?? '');
+
+    // PHP درخواست‌های multipart/form-data و application/x-www-form-urlencoded را
+    // در $_POST و $_FILES تجزیه می‌کند؛ خواندن php://input در این حالت باعث خالی
+    // ماندن بدنه و گم شدن فیلدهایی مانند action می‌شود.
+    if (strpos($ctype, 'multipart/form-data') !== false || strpos($ctype, 'application/x-www-form-urlencoded') !== false) {
+      if ($len > $max) self::error('حجم درخواست بیش از حد مجاز است', 413);
+      return is_array($_POST) ? $_POST : [];
+    }
+
+    if ($len > 1024 * 1024) self::error('حجم درخواست بیش از حد مجاز است', 413);
     $raw = file_get_contents('php://input');
+    if ($raw === false || $raw === '') return [];
+    if ($ctype && strpos($ctype, 'application/json') === false && strpos($ctype, 'text/plain') === false) {
+      self::error('Unsupported Media Type', 415);
+    }
     $j = json_decode($raw, true);
     return is_array($j) ? $j : [];
   }
@@ -19,8 +36,9 @@ class Http {
       $h = $hdrs['Authorization'] ?? ($hdrs['authorization'] ?? '');
     }
     if (stripos($h, 'Bearer ') === 0) return substr($h, 7);
-    // پشتیبانی از توکن در query (برای دانلود فایل‌ها مثل بکاپ/خروجی اکسل که با لینک مستقیم باز می‌شوند)
-    if (!empty($_GET['token'])) return $_GET['token'];
+    // فقط برای خروجی‌های دانلودی، توکن query مجاز است؛ در سایر مسیرها ممنوع است تا توکن در URL نشت نکند.
+    $uri = $_SERVER['REQUEST_URI'] ?? '';
+    if (!empty($_GET['token']) && preg_match('#/api/admin/.*/export|/api/admin/reports/full-export|/api/admin/companies/import-template|/api/admin/schools/import-template#', $uri)) return $_GET['token'];
     return null;
   }
 }
