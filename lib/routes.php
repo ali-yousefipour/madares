@@ -1197,7 +1197,20 @@ route('GET', '/api/public/schools/map', function ($p, $b) {
 
 route('GET', '/api/public/company/{id}', function ($p, $b) {
   _ensure_company_columns();
-  $row = Db::one("SELECT id,title,manager_name,ceo_mobile,phone,address,lat,lng FROM companies WHERE id=? AND is_active=1", [(int)$p['id']]);
+  $row = Db::one("SELECT id,title,manager_name,ceo_mobile,phone,address,lat,lng,custom_fields FROM companies WHERE id=? AND is_active=1", [(int)$p['id']]);
+  if ($row && !empty($row['custom_fields'])) {
+    $cf = json_decode($row['custom_fields'], true);
+    if (is_array($cf)) {
+      foreach (['photo_url','photo_path','image_url','image_path','company_photo','company_photo_path'] as $k) {
+        if (!empty($cf[$k])) { $row['photo_path'] = $cf[$k]; break; }
+      }
+    }
+  }
+  if ($row && !empty($row['photo_path'])) {
+    $raw=(string)$row['photo_path'];
+    $row['photo_url']=(str_starts_with($raw,'/api/media?')||str_starts_with($raw,'http://')||str_starts_with($raw,'https://'))?$raw:'/api/media?path='.rawurlencode($raw);
+  }
+  if ($row) unset($row['custom_fields']);
   if (!$row) Http::error('شرکت یافت نشد', 404);
   return $row;
 }, true);
