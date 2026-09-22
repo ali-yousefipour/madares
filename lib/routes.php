@@ -1,6 +1,102 @@
 <?php
 /* ==================== سامانهٔ مدیریت شرکت‌های سرویس حمل و نقل دانش آموزی مشهد — API ==================== */
 
+
+/* ==================== XLSX writer استاندارد و فارسی ==================== */
+function _xlsx_xml_escape($v){
+  $s=(string)$v;
+  // Normalize malformed UTF-8 before writing XML. Excel is strict about XML 1.0 bytes.
+  if (function_exists('iconv')) {
+    $clean=@iconv('UTF-8','UTF-8//IGNORE',$s);
+    if ($clean !== false) $s=$clean;
+  }
+  // XML 1.0 permits TAB/LF/CR and printable Unicode only.
+  $s=preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/u','',$s) ?? '';
+  return htmlspecialchars($s, ENT_XML1|ENT_QUOTES|ENT_SUBSTITUTE, 'UTF-8');
+}
+function _xlsx_col($n){ $s=''; $n++; while($n){ $r=($n-1)%26; $s=chr(65+$r).$s; $n=intdiv($n-1,26); } return $s; }
+function _xlsx_zip_store(array $files){
+  $data=''; $central=''; $offset=0; $now=getdate();
+  $dosTime=(($now['hours']<<11)|($now['minutes']<<5)|intdiv($now['seconds'],2));
+  $dosDate=max(0,((($now['year']-1980)&127)<<9)|($now['mon']<<5)|$now['mday']);
+  foreach($files as $name=>$content){
+    $name=(string)$name; $content=(string)$content; $crc=crc32($content); if($crc<0)$crc+=4294967296;
+    $nl=strlen($name); $len=strlen($content); $flags=0x0800; // UTF-8 filename flag
+    $data.="PK\x03\x04".pack('v',20).pack('v',$flags).pack('v',0).pack('v',$dosTime).pack('v',$dosDate).pack('V',$crc).pack('V',$len).pack('V',$len).pack('v',$nl).pack('v',0).$name.$content;
+    $central.="PK\x01\x02".pack('v',20).pack('v',20).pack('v',$flags).pack('v',0).pack('v',$dosTime).pack('v',$dosDate).pack('V',$crc).pack('V',$len).pack('V',$len).pack('v',$nl).pack('v',0).pack('v',0).pack('v',0).pack('v',0).pack('V',0).pack('V',$offset).$name;
+    $offset=strlen($data);
+  }
+  return $data.$central."PK\x05\x06".pack('v',0).pack('v',0).pack('v',count($files)).pack('v',count($files)).pack('V',strlen($central)).pack('V',strlen($data)).pack('v',0);
+}
+function _xlsx_package(array $files){
+  if(class_exists('ZipArchive')){
+    $tmp=tempnam(sys_get_temp_dir(),'xlsx_');
+    $z=new ZipArchive();
+    if($z->open($tmp,ZipArchive::CREATE|ZipArchive::OVERWRITE)!==true) throw new Exception('ساخت فایل Excel ناموفق بود');
+    foreach($files as $name=>$content){ $z->addFromString($name,(string)$content); }
+    $z->close(); $bin=file_get_contents($tmp); @unlink($tmp); return $bin;
+  }
+  return _xlsx_zip_store($files);
+}
+function _xlsx_download($filename,array $headers,array $rows,$sheet='گزارش',$title=null,$subtitle=null,$reportNote=null){
+  $title=$title ?: $sheet; $subtitle=$subtitle ?: 'سامانه مدیریت سرویس حمل و نقل دانش‌آموزی مشهد';
+  $colCount=max(1,count($headers)); $lastCol=_xlsx_col($colCount-1);
+  $safeSheet=function($s){$s=(string)$s; if(function_exists('mb_substr'))$s=mb_substr($s,0,31,'UTF-8');else $s=substr($s,0,31); return preg_replace('~[\\/:?\*\[\]]~u','-', $s) ?: 'گزارش';};
+  $sheetName=_xlsx_xml_escape($safeSheet($sheet));
+  $xmlRows='';
+  $writeCell=function($ref,$val,$style) use (&$xmlRows){
+    if($val===null||$val==='') return '<c r="'.$ref.'" s="'.$style.'" t="inlineStr"><is><t></t></is></c>';
+    $v=(string)$val;
+    // Keep phone codes, school codes and IDs that begin with zero as text.
+    $isNum=is_numeric($val) && !preg_match('/^0\d+$/',$v) && !preg_match('/^09\d{9}$/',$v);
+    if($isNum) return '<c r="'.$ref.'" s="'.$style.'"><v>'.preg_replace('/[^0-9eE+\-.]/','',$v).'</v></c>';
+    return '<c r="'.$ref.'" s="'.$style.'" t="inlineStr"><is><t xml:space="preserve">'._xlsx_xml_escape($v).'</t></is></c>';
+  };
+  $xmlRows.='<row r="1" ht="32" customHeight="1"><c r="A1" s="1" t="inlineStr"><is><t xml:space="preserve">'._xlsx_xml_escape($title).'</t></is></c></row>';
+  $xmlRows.='<row r="2" ht="23" customHeight="1"><c r="A2" s="2" t="inlineStr"><is><t xml:space="preserve">'._xlsx_xml_escape($subtitle).'</t></is></c></row>';
+  $xmlRows.='<row r="3" ht="20" customHeight="1"><c r="A3" s="3" t="inlineStr"><is><t xml:space="preserve">تاریخ تهیه گزارش: '._xlsx_xml_escape(date('Y/m/d H:i')).'</t></is></c></row>';
+  $xmlRows.='<row r="4" ht="20" customHeight="1"><c r="A4" s="3" t="inlineStr"><is><t xml:space="preserve">تعداد رکورد: '._xlsx_xml_escape(number_format(count($rows))).($reportNote?' — '._xlsx_xml_escape($reportNote):'').'</t></is></c></row>';
+  $xmlRows.='<row r="5" ht="30" customHeight="1">'; foreach($headers as $ci=>$h){$xmlRows.=$writeCell(_xlsx_col($ci).'5',$h,4);} $xmlRows.='</row>';
+  foreach($rows as $ri=>$row){$excelRow=$ri+6;$xmlRows.='<row r="'.$excelRow.'" ht="24" customHeight="1">'; foreach($headers as $ci=>$h){$xmlRows.=$writeCell(_xlsx_col($ci).$excelRow,$row[$ci]??'',5);} $xmlRows.='</row>';}
+  $cols='';
+  foreach($headers as $i=>$h){$len=function_exists('mb_strlen')?mb_strlen((string)$h,'UTF-8'):strlen((string)$h);$width=min(42,max(14,$len*1.55+5));$cols.='<col min="'.($i+1).'" max="'.($i+1).'" width="'.$width.'" customWidth="1"/>';}
+  $lastRow=max(5,count($rows)+5);
+  $sheetXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'.
+    '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'.
+    '<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:'.$lastCol.$lastRow.'"/>' .
+    '<sheetViews><sheetView rightToLeft="1" showGridLines="0" workbookViewId="0"><pane ySplit="5" topLeftCell="A6" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A6" sqref="A6"/></sheetView></sheetViews>'.
+    '<sheetFormatPr defaultRowHeight="24"/>'.$cols.
+    '<sheetData>'.$xmlRows.'</sheetData>'.
+    '<autoFilter ref="A5:'.$lastCol.$lastRow.'"/>'.
+    '<mergeCells count="4"><mergeCell ref="A1:'.$lastCol.'1"/><mergeCell ref="A2:'.$lastCol.'2"/><mergeCell ref="A3:'.$lastCol.'3"/><mergeCell ref="A4:'.$lastCol.'4"/></mergeCells>'.
+    '<printOptions horizontalCentered="1"/><pageMargins left="0.3" right="0.3" top="0.5" bottom="0.5" header="0.2" footer="0.2"/><pageSetup orientation="landscape" paperSize="9" fitToWidth="1" fitToHeight="0"/></worksheet>';
+  $styles='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'.
+    '<numFmts count="0"/><fonts count="3"><font><sz val="12"/><name val="B Nazanin"/><family val="2"/></font><font><b/><sz val="18"/><name val="B Nazanin"/><family val="2"/></font><font><b/><sz val="12"/><name val="B Nazanin"/><family val="2"/></font></fonts>'.
+    '<fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="173653"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="F7B500"/><bgColor indexed="64"/></patternFill></fill></fills>'.
+    '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="D8E1EB"/></left><right style="thin"><color rgb="D8E1EB"/></right><top style="thin"><color rgb="D8E1EB"/></top><bottom style="thin"><color rgb="D8E1EB"/></bottom><diagonal/></border></borders>'.
+    '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="6"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" applyAlignment="1"><alignment horizontal="right" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="2" borderId="1" applyAlignment="1"><alignment horizontal="right" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="2" fillId="0" borderId="0" applyAlignment="1"><alignment horizontal="right" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="0" applyAlignment="1"><alignment horizontal="right" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="3" borderId="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="1" applyAlignment="1"><alignment horizontal="right" vertical="center" wrapText="1"/></xf></cellXfs>'.
+    '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+  $files=[
+    '[Content_Types].xml'=>'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>',
+    '_rels/.rels'=>'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/></Relationships>',
+    'docProps/core.xml'=>'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>'._xlsx_xml_escape($title).'</dc:title><dc:subject>گزارش مدیریتی</dc:subject><dc:creator>سامانه مدیریت سرویس حمل و نقل دانش‌آموزی مشهد</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">'.date('c').'</dcterms:created></cp:coreProperties>',
+    'docProps/app.xml'=>'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><Application>Microsoft Excel</Application><DocSecurity>0</DocSecurity><ScaleCrop>false</ScaleCrop><HeadingPairs><vt:vector size="2" baseType="variant"><vt:variant><vt:lpstr>Worksheets</vt:lpstr></vt:variant><vt:variant><vt:i4>1</vt:i4></vt:variant></vt:vector></HeadingPairs><TitlesOfParts><vt:vector size="1" baseType="lpstr"><vt:lpstr>'._xlsx_xml_escape($sheet).'</vt:lpstr></vt:vector></TitlesOfParts></Properties>',
+    'xl/workbook.xml'=>'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView activeTab="0"/></bookViews><sheets><sheet name="'.$sheetName.'" sheetId="1" r:id="rId1"/></sheets></workbook>',
+    'xl/_rels/workbook.xml.rels'=>'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>',
+    'xl/styles.xml'=>$styles,
+    'xl/worksheets/sheet1.xml'=>$sheetXml
+  ];
+  $binary=_xlsx_package($files);
+  while(ob_get_level()>0){ @ob_end_clean(); }
+  header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  header('Content-Disposition: attachment; filename="'.$filename.'"');
+  header('Content-Length: '.strlen($binary));
+  header('Cache-Control: private, max-age=0, must-revalidate');
+  header('Pragma: public');
+  header('X-Content-Type-Options: nosniff');
+  echo $binary; exit;
+}
+
 function _cfg() { static $c; return $c ?: ($c = require __DIR__ . '/../config.php'); }
 function _ensure_auth_sessions_table(){
   static $done=false; if($done) return; $done=true;
@@ -604,13 +700,9 @@ function _assign_schools_to_company($schoolsText, $companyId){
 
 route('GET', '/api/admin/companies/import-template', function($p,$b,$u){
   _block_viewer($u);
-  header('Content-Type: text/csv; charset=UTF-8');
-  header('Content-Disposition: attachment; filename="companies-import-template.csv"');
-  echo "\xEF\xBB\xBF";
-  $out=fopen('php://output','w');
-  fputcsv($out, ['نام شرکت','مدیر عامل','تلفن','آدرس','ظرفیت دانش آموز','درصد کاهش مجاز','درصد افزایش مجاز','مدارس','ثبت شده','نمایندگان']);
-  fputcsv($out, ['شرکت نمونه','علی رضایی','05131234567','مشهد، ...','500','10','15','مدرسه نمونه ۱؛ مدرسه نمونه ۲','فعال','رضا احمدی|09151234567|reza.ahmadi|Mdr@123456؛ مریم کریمی|09151234568']);
-  fclose($out); exit;
+  $headers=['نام شرکت','مدیر عامل','تلفن','آدرس','ظرفیت دانش آموز','درصد کاهش مجاز','درصد افزایش مجاز','مدارس','ثبت شده','نمایندگان'];
+  $sample=['شرکت نمونه','علی رضایی','05131234567','مشهد، ...','500','10','15','مدرسه نمونه ۱؛ مدرسه نمونه ۲','فعال','رضا احمدی|09151234567|reza.ahmadi|Mdr@123456؛ مریم کریمی|09151234568'];
+  _xlsx_download('companies-import-template.xlsx',$headers,[$sample],'قالب ورود شرکت‌ها','قالب نمونه ایمپورت شرکت‌ها','سازمان مدیریت و نظارت بر تاکسیرانی شهرداری مشهد مقدس');
 }, false, 'admin');
 
 route('POST', '/api/admin/companies/import', function($p,$b,$u){
@@ -676,6 +768,26 @@ route('GET', '/api/admin/companies', function($p, $b, $u) {
       (SELECT COUNT(*) FROM schools s WHERE s.company_id=c.id AND s.location_status='done') done_count,
       (SELECT COUNT(*) FROM company_users cu WHERE cu.company_id=c.id) users_count
    FROM companies c ORDER BY c.title");
+}, false, 'admin');
+
+route('GET', '/api/admin/companies/export', function($p,$b,$u){
+  _ensure_company_columns(); _ensure_company_field_defs_table();
+  $q=trim((string)($_GET['q']??'')); $args=[]; $where='';
+  if($q!==''){$where='WHERE c.title LIKE ? OR c.manager_name LIKE ? OR c.ceo_mobile LIKE ? OR c.phone LIKE ? OR c.address LIKE ?';$qq='%'.$q.'%';$args=[$qq,$qq,$qq,$qq,$qq];}
+  $rows=Db::all("SELECT c.*, (SELECT COUNT(*) FROM schools s WHERE s.company_id=c.id) schools_count,(SELECT COUNT(*) FROM schools s WHERE s.company_id=c.id AND s.location_status='done') done_count,(SELECT COUNT(*) FROM company_users cu WHERE cu.company_id=c.id) users_count FROM companies c $where ORDER BY c.title",$args);
+  $defs=Db::all("SELECT field_key,label FROM company_field_defs WHERE is_active=1 ORDER BY sort_order,id");
+  $headers=['شناسه','نام شرکت','نام مدیرعامل','تلفن همراه مدیرعامل','تلفن ثابت','آدرس','ظرفیت دانش‌آموز','درصد کاهش مجاز','درصد افزایش مجاز','عرض جغرافیایی','طول جغرافیایی','تعداد مدارس','مدارس ثبت‌شده','تعداد نمایندگان','وضعیت','تکمیل پروفایل'];
+  $builtin=['title','manager_name','ceo_mobile','phone','address','lat','lng']; foreach($defs as $d){if(!in_array($d['field_key'],$builtin,true))$headers[]=$d['label'];}
+  $out=[]; foreach($rows as $r){$custom=json_decode($r['custom_fields']??'{}',true)?:[];$row=[$r['id'],$r['title'],$r['manager_name'],$r['ceo_mobile'],$r['phone'],$r['address'],$r['capacity_students'],$r['allowed_min_percent'],$r['allowed_max_percent'],$r['lat'],$r['lng'],$r['schools_count'],$r['done_count'],$r['users_count'],$r['is_active']?'فعال':'غیرفعال',$r['profile_completed']?'تکمیل‌شده':'ناقص'];foreach($defs as $d){if(!in_array($d['field_key'],$builtin,true))$row[]=$custom[$d['field_key']]??'';} $out[]=$row;}
+  $format=trim((string)($_GET['format']??'full'));
+  if($format==='summary'){
+    $headers=['نام شرکت','مدیرعامل','ظرفیت دانش‌آموز','تعداد مدارس','مدارس ثبت‌شده','نمایندگان','وضعیت'];
+    $out=array_map(fn($r)=>[$r['title'],$r['manager_name'],$r['capacity_students'],$r['schools_count'],$r['done_count'],$r['users_count'],$r['is_active']?'فعال':'غیرفعال'], $rows);
+  } elseif($format==='contact'){
+    $headers=['نام شرکت','مدیرعامل','موبایل مدیرعامل','تلفن','آدرس'];
+    $out=array_map(fn($r)=>[$r['title'],$r['manager_name'],$r['ceo_mobile'],$r['phone'],$r['address']],$rows);
+  }
+  _xlsx_download('companies.xlsx',$headers,$out,'شرکت‌ها','فهرست شرکت‌های حمل‌ونقل دانش‌آموزی','سازمان مدیریت و نظارت بر تاکسیرانی شهرداری مشهد مقدس');
 }, false, 'admin');
 
 route('GET', '/api/admin/companies/{id}', function ($p, $b, $u) {
@@ -1002,22 +1114,17 @@ function _school_builtin_label($key, $fallback, $meta = null) {
 
 route('GET', '/api/admin/schools/import-template', function($p,$b,$u){
   _ensure_school_field_defs_table();
-  $builtins = (function(){
-    $meta = _school_builtin_meta();
-    $rows = array_map(function($f) use ($meta){ return ['key'=>$f[0], 'label'=>_school_builtin_label($f[0], $f[1], $meta), 'active'=>_school_builtin_is_active($f[0], $meta)]; }, BUILTIN_SCHOOL_FIELDS);
-    return array_values(array_filter($rows, fn($x)=>$x['active']));
+  $builtins=(function(){
+    $meta=_school_builtin_meta();
+    $rows=array_map(function($f) use ($meta){return ['key'=>$f[0],'label'=>_school_builtin_label($f[0],$f[1],$meta),'active'=>_school_builtin_is_active($f[0],$meta)];},BUILTIN_SCHOOL_FIELDS);
+    return array_values(array_filter($rows,fn($x)=>$x['active']));
   })();
-  $headers = ['کد مدرسه'];
-  foreach ($builtins as $f) {
-    if (in_array($f['key'], ['lat','lng','start_time','end_time'], true)) continue;
-    $headers[] = $f['label'];
-  }
-  $custom = Db::all("SELECT label FROM school_field_defs WHERE is_active=1 ORDER BY sort_order,id");
-  foreach ($custom as $c) $headers[] = $c['label'];
-  header('Content-Type: text/csv; charset=UTF-8');
-  header('Content-Disposition: attachment; filename="schools-import-template.csv"');
-  echo "\xEF\xBB\xBF"; $out=fopen('php://output','w'); fputcsv($out,$headers);
-  fputcsv($out, array_map(fn($x)=>'نمونه '.$x, $headers)); fclose($out); exit;
+  $headers=['کد مدرسه'];
+  foreach($builtins as $f){if(in_array($f['key'],['lat','lng','start_time','end_time'],true))continue;$headers[]=$f['label'];}
+  $custom=Db::all("SELECT label FROM school_field_defs WHERE is_active=1 ORDER BY sort_order,id");
+  foreach($custom as $c)$headers[]=$c['label'];
+  $sample=array_map(fn($h)=>'نمونه '.$h,$headers);
+  _xlsx_download('schools-import-template.xlsx',$headers,[$sample],'قالب ورود مدارس','قالب نمونه ایمپورت مدارس','سازمان مدیریت و نظارت بر تاکسیرانی شهرداری مشهد مقدس');
 }, false, 'admin');
 
 // ایمپورت اکسل مدارس: ستون‌های ورودی (سرستون فارسی، ترتیب مهم نیست)
@@ -1129,30 +1236,30 @@ _block_viewer($u);
   return ['inserted' => $inserted, 'updated' => $updated, 'skipped' => $skipped, 'errors' => array_slice($errors, 0, 20)];
 }, false, 'admin');
 
-// خروجی اکسل (CSV با BOM) شامل مختصات
+// خروجی XLSX شامل مختصات و تمام اطلاعات اصلی مدارس
 route('GET', '/api/admin/schools/export', function ($p, $b, $u) {
-  _ensure_school_columns();
-  $conds = []; $args = [];
-  if (!empty($_GET['district_id'])) { $conds[] = "s.district_id=?"; $args[] = (int)$_GET['district_id']; }
-  if (!empty($_GET['company_id'])) { $conds[] = "s.company_id=?"; $args[] = (int)$_GET['company_id']; }
-  if (!empty($_GET['status'])) { $conds[] = "s.location_status=?"; $args[] = $_GET['status']; }
-  $where = $conds ? 'WHERE ' . implode(' AND ', $conds) : '';
-  $rows = Db::all("SELECT s.code,s.name,d.title district_title,c.title company_title,s.gender,s.shift,s.level,s.school_type,
-      s.start_time,s.end_time,s.shift1_start_time,s.shift1_end_time,s.shift2_start_time,s.shift2_end_time,s.driver_count,s.student_count,s.address,s.phone,
-      s.lat,s.lng,s.location_status,s.location_recorded_at
-    FROM schools s LEFT JOIN districts d ON d.id=s.district_id LEFT JOIN companies c ON c.id=s.company_id
-    $where ORDER BY s.id", $args);
-  header('Content-Type: text/csv; charset=UTF-8');
-  header('Content-Disposition: attachment; filename="schools.csv"');
-  echo "\xEF\xBB\xBF"; $out = fopen('php://output', 'w');
-  fputcsv($out, ['کد مدرسه', 'نام مدرسه', 'ناحیه', 'شرکت', 'جنسیت', 'شیفت', 'مقطع تحصیلی', 'نوع مدرسه', 'شروع فعالیت', 'پایان فعالیت', 'شروع شیفت صبح', 'پایان شیفت صبح', 'شروع شیفت عصر', 'پایان شیفت عصر',
-    'تعداد رانندگان', 'تعداد دانش‌آموز', 'آدرس', 'تلفن', 'عرض جغرافیایی', 'طول جغرافیایی', 'وضعیت', 'تاریخ ثبت موقعیت']);
-  foreach ($rows as $r) {
-    fputcsv($out, [$r['code'], $r['name'], $r['district_title'], $r['company_title'], $r['gender'], $r['shift'], $r['level'], $r['school_type'],
-      $r['start_time'], $r['end_time'], $r['shift1_start_time'], $r['shift1_end_time'], $r['shift2_start_time'], $r['shift2_end_time'], $r['driver_count'], $r['student_count'], $r['address'], $r['phone'],
-      $r['lat'], $r['lng'], $r['location_status'] === 'done' ? 'ثبت‌شده' : 'باقی‌مانده', $r['location_recorded_at']]);
+  _ensure_school_columns(); _ensure_school_field_defs_table();
+  $conds=[]; $args=[];
+  if(!empty($_GET['district_id'])){$conds[]='s.district_id=?';$args[]=(int)$_GET['district_id'];}
+  if(!empty($_GET['company_id'])){$conds[]='s.company_id=?';$args[]=(int)$_GET['company_id'];}
+  if(!empty($_GET['status'])){$conds[]='s.location_status=?';$args[]=$_GET['status'];}
+  if(!empty($_GET['q'])){$conds[]='(s.name LIKE ? OR s.code LIKE ?)';$q='%'.$_GET['q'].'%';$args[]=$q;$args[]=$q;}
+  $where=$conds?'WHERE '.implode(' AND ',$conds):'';
+  $rows=Db::all("SELECT s.code,s.name,d.title district_title,c.title company_title,s.gender,s.shift,s.level,s.school_type,s.start_time,s.end_time,s.shift1_start_time,s.shift1_end_time,s.shift2_start_time,s.shift2_end_time,s.driver_count,s.student_count,s.address,s.phone,s.principal_name,s.lat,s.lng,s.location_status,s.location_recorded_at,s.custom_fields FROM schools s LEFT JOIN districts d ON d.id=s.district_id LEFT JOIN companies c ON c.id=s.company_id $where ORDER BY s.id",$args);
+  $defs=Db::all("SELECT field_key,label FROM school_field_defs WHERE is_active=1 ORDER BY sort_order,id");
+  $headers=['کد مدرسه','نام مدرسه','ناحیه','شرکت سرویس‌دهنده','جنسیت','شیفت','مقطع تحصیلی','نوع مدرسه','شروع فعالیت','پایان فعالیت','شروع شیفت صبح','پایان شیفت صبح','شروع شیفت عصر','پایان شیفت عصر','تعداد رانندگان','تعداد دانش‌آموز','آدرس','تلفن','عرض جغرافیایی','طول جغرافیایی','وضعیت','تاریخ ثبت موقعیت'];
+  foreach($defs as $d){ if(!in_array($d['field_key'],['name','district_id','company_id','gender','shift','level','school_type','start_time','end_time','shift1_start_time','shift1_end_time','shift2_start_time','shift2_end_time','driver_count','address','phone','student_count'],true))$headers[]=$d['label']; }
+  $out=[];
+  foreach($rows as $r){$custom=json_decode($r['custom_fields']??'{}',true)?:[];$out[]=[ $r['code'],$r['name'],$r['district_title'],$r['company_title'],$r['gender'],$r['shift'],$r['level'],$r['school_type'],$r['start_time'],$r['end_time'],$r['shift1_start_time'],$r['shift1_end_time'],$r['shift2_start_time'],$r['shift2_end_time'],$r['driver_count'],$r['student_count'],$r['address'],$r['phone'],$r['lat'],$r['lng'],$r['location_status']==='done'?'ثبت‌شده':'باقی‌مانده',$r['location_recorded_at'], ...array_map(fn($d)=>$custom[$d['field_key']]??'',array_filter($defs,fn($d)=>!in_array($d['field_key'],['name','district_id','company_id','gender','shift','level','school_type','start_time','end_time','shift1_start_time','shift1_end_time','shift2_start_time','shift2_end_time','driver_count','address','phone','student_count'],true))) ];}
+  $format=trim((string)($_GET['format']??'full'));
+  if($format==='summary'){
+    $headers=['کد مدرسه','نام مدرسه','ناحیه','شرکت سرویس‌دهنده','تعداد دانش‌آموز','وضعیت موقعیت'];
+    $out=array_map(fn($r)=>[$r['code'],$r['name'],$r['district_title'],$r['company_title'],$r['student_count'],$r['location_status']==='done'?'ثبت‌شده':'باقی‌مانده'], $rows);
+  } elseif($format==='contact'){
+    $headers=['کد مدرسه','نام مدرسه','ناحیه','مدیر مدرسه','تلفن','آدرس'];
+    $out=array_map(fn($r)=>[$r['code'],$r['name'],$r['district_title'],$r['principal_name'],$r['phone'],$r['address']],$rows);
   }
-  fclose($out); exit;
+  _xlsx_download('schools.xlsx',$headers,$out,'مدارس','فهرست مدارس سامانه حمل‌ونقل دانش‌آموزی','سازمان مدیریت و نظارت بر تاکسیرانی شهرداری مشهد مقدس');
 }, false, 'admin');
 
 // نقاط مدارس برای نقشهٔ داشبورد
@@ -1197,20 +1304,7 @@ route('GET', '/api/public/schools/map', function ($p, $b) {
 
 route('GET', '/api/public/company/{id}', function ($p, $b) {
   _ensure_company_columns();
-  $row = Db::one("SELECT id,title,manager_name,ceo_mobile,phone,address,lat,lng,custom_fields FROM companies WHERE id=? AND is_active=1", [(int)$p['id']]);
-  if ($row && !empty($row['custom_fields'])) {
-    $cf = json_decode($row['custom_fields'], true);
-    if (is_array($cf)) {
-      foreach (['photo_url','photo_path','image_url','image_path','company_photo','company_photo_path'] as $k) {
-        if (!empty($cf[$k])) { $row['photo_path'] = $cf[$k]; break; }
-      }
-    }
-  }
-  if ($row && !empty($row['photo_path'])) {
-    $raw=(string)$row['photo_path'];
-    $row['photo_url']=(str_starts_with($raw,'/api/media?')||str_starts_with($raw,'http://')||str_starts_with($raw,'https://'))?$raw:'/api/media?path='.rawurlencode($raw);
-  }
-  if ($row) unset($row['custom_fields']);
+  $row = Db::one("SELECT id,title,manager_name,ceo_mobile,phone,address,lat,lng FROM companies WHERE id=? AND is_active=1", [(int)$p['id']]);
   if (!$row) Http::error('شرکت یافت نشد', 404);
   return $row;
 }, true);
@@ -1263,13 +1357,8 @@ route('GET', '/api/admin/reports/company/{id}/export', function ($p, $b, $u) {
   $schools = Db::all("SELECT s.code,s.name,d.title district_title,s.location_status,s.lat,s.lng,s.location_recorded_at,cu.full_name editor_name
     FROM schools s LEFT JOIN districts d ON d.id=s.district_id LEFT JOIN company_users cu ON cu.id=s.edited_by
     WHERE s.company_id=? ORDER BY s.name", [$cid]);
-  header('Content-Type: text/csv; charset=UTF-8');
-  header('Content-Disposition: attachment; filename="report_' . $cid . '.csv"');
-  echo "\xEF\xBB\xBF"; $out = fopen('php://output', 'w');
-  fputcsv($out, ['گزارش عملکرد شرکت', $company['title']]); fputcsv($out, []);
-  fputcsv($out, ['کد مدرسه', 'نام مدرسه', 'ناحیه', 'وضعیت', 'عرض جغرافیایی', 'طول جغرافیایی', 'تاریخ ثبت', 'ثبت‌کننده']);
-  foreach ($schools as $r) fputcsv($out, [$r['code'], $r['name'], $r['district_title'], $r['location_status'] === 'done' ? 'ثبت‌شده' : 'باقی‌مانده', $r['lat'], $r['lng'], $r['location_recorded_at'], $r['editor_name']]);
-  fclose($out); exit;
+  $out=[]; foreach ($schools as $r) $out[]=[$r['code'], $r['name'], $r['district_title'], $r['location_status'] === 'done' ? 'ثبت‌شده' : 'باقی‌مانده', $r['lat'], $r['lng'], $r['location_recorded_at'], $r['editor_name']];
+  _xlsx_download('company-report-'.$cid.'.xlsx',['کد مدرسه','نام مدرسه','ناحیه','وضعیت','عرض جغرافیایی','طول جغرافیایی','تاریخ ثبت','ثبت‌کننده'],$out,'گزارش عملکرد شرکت','گزارش عملکرد شرکت: '.($company['title']??''),'سازمان مدیریت و نظارت بر تاکسیرانی شهرداری مشهد مقدس');
 }, false, 'admin');
 
 /* ==================== اپ اندروید — نماینده شرکت ==================== */
@@ -1356,6 +1445,111 @@ route('GET', '/api/my/stats', function ($p, $b, $u) {
   $mine = (int)(Db::one("SELECT COUNT(DISTINCT school_id) n FROM school_visit_logs WHERE company_user_id=?", [$u['id']])['n'] ?? 0);
   return ['company_total' => $total, 'company_done' => $done, 'company_pending' => $total - $done, 'my_visited' => $mine];
 }, false, 'company');
+
+/* ==================== آمار بازدید عمومی سایت ==================== */
+function _ensure_site_visit_table() {
+  static $done = false; if ($done) return; $done = true;
+  Db::run("CREATE TABLE IF NOT EXISTS site_visit_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    visitor_hash CHAR(64) NOT NULL,
+    page_path VARCHAR(255) NOT NULL DEFAULT '/',
+    referrer VARCHAR(500) NULL,
+    user_agent VARCHAR(500) NULL,
+    visited_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_svl_visited_at (visited_at),
+    INDEX idx_svl_visitor_date (visitor_hash, visited_at)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+}
+function _fa_digits_to_en($s) {
+  return strtr((string)$s, ['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9']);
+}
+function _jalali_to_gregorian($jy, $jm, $jd) {
+  $jy=(int)$jy; $jm=(int)$jm; $jd=(int)$jd;
+  $jy -= 979; $jm -= 1; $jd -= 1;
+  $j_day_no = 365*$jy + intdiv($jy,33)*8 + intdiv(($jy%33)+3,4);
+  if ($jm < 6) $j_day_no += $jm*31; else $j_day_no += $jm*30+6;
+  $j_day_no += $jd; $g_day_no = $j_day_no + 79;
+  $gy = 1600 + 400*intdiv($g_day_no,146097); $g_day_no %= 146097;
+  $leap = true;
+  if ($g_day_no >= 36525) { $g_day_no--; $gy += 100*intdiv($g_day_no,36524); $g_day_no %= 36524; if ($g_day_no >= 365) $g_day_no++; else $leap=false; }
+  $gy += 4*intdiv($g_day_no,1461); $g_day_no %= 1461;
+  if ($g_day_no >= 366) { $leap=false; $g_day_no--; $gy += intdiv($g_day_no,365); $g_day_no %= 365; }
+  $sal_a=[0,31,($leap?29:28),31,30,31,30,31,31,30,31,30,31];
+  $gm=1; while ($gm<=12 && $g_day_no >= $sal_a[$gm]) { $g_day_no -= $sal_a[$gm]; $gm++; }
+  $gd=$g_day_no+1; return sprintf('%04d-%02d-%02d',$gy,$gm,$gd);
+}
+function _gregorian_to_jalali($gy,$gm,$gd) {
+  $g_d_m=[0,31,59,90,120,151,181,212,243,273,304,334];
+  $gy=(int)$gy; $gm=(int)$gm; $gd=(int)$gd; $gy2=($gm>2)?$gy+1:$gy;
+  $days=355666+365*$gy+intdiv($gy2+3,4)-intdiv($gy2+99,100)+intdiv($gy2+399,400)+$gd+$g_d_m[$gm-1];
+  $jy=-1595+33*intdiv($days,12053); $days%=12053; $jy+=4*intdiv($days,1461); $days%=1461;
+  if ($days>365) { $jy+=intdiv($days-1,365); $days=($days-1)%365; }
+  if ($days<186) { $jm=1+intdiv($days,31); $jd=1+($days%31); } else { $jm=7+intdiv($days-186,30); $jd=1+(($days-186)%30); }
+  return sprintf('%04d-%02d-%02d',$jy,$jm,$jd);
+}
+function _normalize_jalali_range($from, $to) {
+  $from=preg_replace('/[^0-9\-\/]/','',_fa_digits_to_en($from)); $to=preg_replace('/[^0-9\-\/]/','',_fa_digits_to_en($to));
+  $parse=function($s){ $x=preg_split('/[-\/]/',$s); if(count($x)!==3) return null; return _jalali_to_gregorian((int)$x[0],(int)$x[1],(int)$x[2]); };
+  return [$parse($from),$parse($to)];
+}
+function _site_visit_group_expr($group) {
+  switch ($group) {
+    case 'week': return "DATE_SUB(DATE(visited_at), INTERVAL WEEKDAY(visited_at) DAY)";
+    case 'month': return "DATE_FORMAT(visited_at, '%Y-%m')";
+    default: return "DATE(visited_at)";
+  }
+}
+function _site_visit_report_rows($from, $to, $group='day') {
+  $expr=_site_visit_group_expr($group);
+  $rows=Db::all("SELECT $expr period_key, COUNT(*) page_views, COUNT(DISTINCT visitor_hash) unique_visitors
+    FROM site_visit_logs WHERE visited_at>=? AND visited_at<? GROUP BY period_key ORDER BY period_key",[$from.' 00:00:00',$to.' 00:00:00']);
+  $out=[];
+  foreach($rows as $r){
+    $key=(string)$r['period_key'];
+    if($group==='day') { [$y,$m,$d]=array_map('intval',explode('-',$key)); $fa=_gregorian_to_jalali($y,$m,$d); $label=$fa; }
+    elseif($group==='month') { [$y,$m]=array_map('intval',explode('-',$key)); $fa=_gregorian_to_jalali($y,$m,1); $label=substr($fa,0,7); }
+    else { [$y,$m,$d]=array_map('intval',explode('-',$key)); $start=_gregorian_to_jalali($y,$m,$d); $end=_gregorian_to_jalali(...array_map('intval',explode('-',date('Y-m-d',strtotime($key.' +6 days'))))); $label='از '.$start.' تا '.$end; }
+    $out[]=['period'=>$label,'period_key'=>$key,'page_views'=>(int)$r['page_views'],'unique_visitors'=>(int)$r['unique_visitors']];
+  }
+  return $out;
+}
+function _site_visit_defaults($group) {
+  $today=date('Y-m-d');
+  if($group==='month') $from=date('Y-m-01',strtotime('-11 months')); elseif($group==='week') $from=date('Y-m-d',strtotime('-83 days')); else $from=date('Y-m-d',strtotime('-29 days'));
+  return [$from,date('Y-m-d',strtotime($today.' +1 day'))];
+}
+route('POST','/api/public/site-visit',function($p,$b){
+  try {
+    _ensure_site_visit_table();
+    $client=(string)($b['visitor_id']??''); $path=substr((string)($b['path']??'/'),0,255);
+    $ua=substr((string)($_SERVER['HTTP_USER_AGENT']??''),0,500); $ref=substr((string)($_SERVER['HTTP_REFERER']??''),0,500);
+    $ip=(string)($_SERVER['REMOTE_ADDR']??'');
+    $hash=hash('sha256',$client.'|'.$ip.'|'.$ua);
+    Db::run("INSERT INTO site_visit_logs(visitor_hash,page_path,referrer,user_agent) VALUES(?,?,?,?)",[$hash,$path,$ref,$ua]);
+  } catch(Throwable $e) {}
+  return ['ok'=>true];
+}, true);
+route('GET','/api/admin/site-visits',function($p,$b,$u){
+  _require_role($u,['super_admin']); _ensure_site_visit_table();
+  $group=in_array(($p['group']??$_GET['group']??'day'),['day','week','month','custom'],true)?($p['group']??$_GET['group']??'day'):'day';
+  if($group==='custom') $group='day';
+  [$from,$to]=_site_visit_defaults($group);
+  $fj=$_GET['from']??''; $tj=$_GET['to']??'';
+  if($fj && $tj){ [$from,$to]=_normalize_jalali_range($fj,$tj); if($to) $to=date('Y-m-d',strtotime($to.' +1 day')); }
+  if(!$from||!$to) Http::error('بازهٔ تاریخ نامعتبر است.',400);
+  $rows=_site_visit_report_rows($from,$to,$group);
+  $tot=Db::one("SELECT COUNT(*) page_views, COUNT(DISTINCT visitor_hash) unique_visitors FROM site_visit_logs WHERE visited_at>=? AND visited_at<?",[$from.' 00:00:00',$to.' 00:00:00']);
+  return ['group'=>$group,'from'=>_gregorian_to_jalali(...array_map('intval',explode('-',$from))),'to'=>_gregorian_to_jalali(...array_map('intval',explode('-',date('Y-m-d',strtotime($to.' -1 day'))))),'page_views'=>(int)($tot['page_views']??0),'unique_visitors'=>(int)($tot['unique_visitors']??0),'rows'=>$rows];
+}, false, 'admin');
+route('GET','/api/admin/site-visits/export',function($p,$b,$u){
+  _require_role($u,['super_admin']); _ensure_site_visit_table();
+  $group=$_GET['group']??'day'; if(!in_array($group,['day','week','month'],true))$group='day';
+  [$from,$to]=_site_visit_defaults($group); if(!empty($_GET['from'])&&!empty($_GET['to'])){[$from,$to]=_normalize_jalali_range($_GET['from'],$_GET['to']);if($to)$to=date('Y-m-d',strtotime($to.' +1 day'));}
+  if(!$from||!$to)Http::error('بازهٔ تاریخ نامعتبر است.',400);
+  $rows=_site_visit_report_rows($from,$to,$group);
+  $out=array_map(fn($r)=>[$r['period'],$r['page_views'],$r['unique_visitors']],$rows);
+  _xlsx_download('site-visits.xlsx',['بازه شمسی','تعداد بازدید','بازدیدکننده یکتا'],$out,'آمار بازدید','گزارش آمار بازدید سایت','سامانه مدیریت شرکت‌های حمل‌ونقل دانش‌آموزی مشهد');
+},false,'admin');
 
 /* ==================== تنظیمات سامانه (دامنه / اتصال دیتابیس) ==================== */
 route('GET', '/api/admin/settings', function ($p, $b, $u) {
@@ -2374,56 +2568,24 @@ route('POST', '/api/auth/reset-password', function ($p, $b) {
 }, true);
 
 
-// خروجی جامع اکسل/CSV از تمام اطلاعات وارد‌شده (شرکت‌ها، نواحی، نمایندگان، مدارس با همهٔ آیتم‌ها)
+// خروجی جامع XLSX از تمام اطلاعات مدیریتی سامانه
 route('GET', '/api/admin/reports/full-export', function ($p, $b, $u) {
   _ensure_school_columns(); _ensure_school_field_defs_table();
-  header('Content-Type: text/csv; charset=UTF-8');
-  header('Content-Disposition: attachment; filename="full-report.csv"');
-  echo "\xEF\xBB\xBF"; $out = fopen('php://output', 'w');
-
-  fputcsv($out, ['گزارش جامع سامانهٔ سرویس حمل و نقل دانش آموزی مشهد', date('Y-m-d H:i')]); fputcsv($out, []);
-
-  fputcsv($out, ['--- شرکت‌ها ---']);
-  fputcsv($out, ['نام شرکت', 'مدیرعامل', 'تلفن', 'آدرس', 'وضعیت', 'تعداد مدارس', 'تعداد ثبت‌شده', 'تعداد نمایندگان']);
-  foreach (Db::all("SELECT c.*, (SELECT COUNT(*) FROM schools s WHERE s.company_id=c.id) sc,
+  $rows=[];
+  $companies=Db::all("SELECT c.*, (SELECT COUNT(*) FROM schools s WHERE s.company_id=c.id) sc,
       (SELECT COUNT(*) FROM schools s WHERE s.company_id=c.id AND s.location_status='done') dc,
-      (SELECT COUNT(*) FROM company_users cu WHERE cu.company_id=c.id) uc FROM companies c ORDER BY c.title") as $c) {
-    fputcsv($out, [$c['title'], $c['manager_name'], $c['phone'], $c['address'], $c['is_active'] ? 'فعال' : 'غیرفعال', $c['sc'], $c['dc'], $c['uc']]);
+      (SELECT COUNT(*) FROM company_users cu WHERE cu.company_id=c.id) uc FROM companies c ORDER BY c.title");
+  foreach($companies as $c) $rows[]=['شرکت‌ها',$c['title'],$c['manager_name'],$c['phone'],$c['address'],$c['is_active']?'فعال':'غیرفعال',$c['sc'],$c['dc'],$c['uc']];
+  foreach(Db::all("SELECT cu.*, c.title company_title FROM company_users cu JOIN companies c ON c.id=cu.company_id ORDER BY c.title, cu.full_name") as $r) $rows[]=['نمایندگان',$r['full_name'],$r['username'],$r['phone'],$r['company_title'],$r['is_active']?'فعال':'غیرفعال',$r['last_login_at'],'',''];
+  foreach(Db::all("SELECT d.*, (SELECT COUNT(*) FROM schools s WHERE s.district_id=d.id) sc FROM districts d ORDER BY d.title") as $d) $rows[]=['نواحی',$d['title'],$d['sc'],$d['is_active']?'فعال':'','','','','',''];
+  $customDefs=Db::all("SELECT field_key,label FROM school_field_defs WHERE is_active=1 ORDER BY sort_order");
+  foreach(Db::all("SELECT s.*, d.title district_title, c.title company_title FROM schools s LEFT JOIN districts d ON d.id=s.district_id LEFT JOIN companies c ON c.id=s.company_id ORDER BY s.name") as $x){
+    $row=['مدارس',$x['code'],$x['name'],$x['district_title'],$x['company_title'],$x['gender'],$x['shift'],$x['level'],$x['school_type'],$x['start_time'],$x['end_time'],$x['shift1_start_time'],$x['shift1_end_time'],$x['shift2_start_time'],$x['shift2_end_time'],$x['driver_count'],$x['student_count'],$x['address'],$x['phone'],$x['principal_name'],$x['lat'],$x['lng'],$x['location_status']==='done'?'ثبت‌شده':'باقی‌مانده',$x['location_recorded_at']];
+    $cf=json_decode($x['custom_fields']??'{}',true)?:[]; foreach($customDefs as $cd) $row[]=$cf[$cd['field_key']]??''; $rows[]=$row;
   }
-  fputcsv($out, []);
-
-  fputcsv($out, ['--- نمایندگان شرکت‌ها ---']);
-  fputcsv($out, ['نام کامل', 'نام کاربری', 'تلفن', 'شرکت', 'وضعیت', 'آخرین ورود']);
-  foreach (Db::all("SELECT cu.*, c.title company_title FROM company_users cu JOIN companies c ON c.id=cu.company_id ORDER BY c.title, cu.full_name") as $r) {
-    fputcsv($out, [$r['full_name'], $r['username'], $r['phone'], $r['company_title'], $r['is_active'] ? 'فعال' : 'غیرفعال', $r['last_login_at']]);
-  }
-  fputcsv($out, []);
-
-  fputcsv($out, ['--- نواحی آموزش و پرورش ---']);
-  fputcsv($out, ['عنوان ناحیه', 'تعداد مدارس', 'وضعیت']);
-  foreach (Db::all("SELECT d.*, (SELECT COUNT(*) FROM schools s WHERE s.district_id=d.id) sc FROM districts d ORDER BY d.title") as $d) {
-    fputcsv($out, [$d['title'], $d['sc'], $d['is_active'] ? 'فعال' : 'غیرفعال']);
-  }
-  fputcsv($out, []);
-
-  $customDefs = Db::all("SELECT field_key, label FROM school_field_defs WHERE is_active=1 ORDER BY sort_order");
-  fputcsv($out, ['--- مدارس (کامل) ---']);
-  $headerRow = ['کد', 'نام مدرسه', 'ناحیه', 'شرکت', 'جنسیت', 'شیفت', 'مقطع', 'نوع مدرسه', 'شروع فعالیت', 'پایان فعالیت', 'شروع شیفت صبح', 'پایان شیفت صبح', 'شروع شیفت عصر', 'پایان شیفت عصر',
-    'تعداد رانندگان', 'تعداد دانش‌آموز', 'آدرس', 'تلفن', 'مدیر مدرسه', 'عرض جغرافیایی', 'طول جغرافیایی', 'وضعیت', 'تاریخ ثبت'];
-  foreach ($customDefs as $cd) $headerRow[] = $cd['label'];
-  fputcsv($out, $headerRow);
-  foreach (Db::all("SELECT s.*, d.title district_title, c.title company_title FROM schools s
-      LEFT JOIN districts d ON d.id=s.district_id LEFT JOIN companies c ON c.id=s.company_id ORDER BY s.name") as $s) {
-    $row = [$s['code'], $s['name'], $s['district_title'], $s['company_title'], $s['gender'], $s['shift'], $s['level'], $s['school_type'],
-      $s['start_time'], $s['end_time'], $s['shift1_start_time'], $s['shift1_end_time'], $s['shift2_start_time'], $s['shift2_end_time'], $s['driver_count'], $s['student_count'], $s['address'], $s['phone'], $s['principal_name'],
-      $s['lat'], $s['lng'], $s['location_status'] === 'done' ? 'ثبت‌شده' : 'باقی‌مانده', $s['location_recorded_at']];
-    $cf = json_decode($s['custom_fields'] ?? '{}', true) ?: [];
-    foreach ($customDefs as $cd) $row[] = $cf[$cd['field_key']] ?? '';
-    fputcsv($out, $row);
-  }
-  fclose($out); exit;
+  $headers=['بخش','عنوان/کد','نام/نام کامل','ناحیه/تلفن','شرکت/آدرس','جنسیت/وضعیت','شیفت/تعداد مدارس','مقطع/تعداد ثبت‌شده','نوع مدرسه/تعداد نمایندگان','شروع فعالیت','پایان فعالیت','شروع شیفت صبح','پایان شیفت صبح','شروع شیفت عصر','پایان شیفت عصر','تعداد رانندگان','تعداد دانش‌آموز','آدرس','تلفن','مدیر مدرسه','عرض جغرافیایی','طول جغرافیایی','وضعیت','تاریخ ثبت']; foreach($customDefs as $cd)$headers[]=$cd['label'];
+  _xlsx_download('full-report.xlsx',$headers,$rows,'گزارش جامع','گزارش جامع سامانه حمل‌ونقل دانش‌آموزی','سازمان مدیریت و نظارت بر تاکسیرانی شهرداری مشهد مقدس');
 }, false, 'admin');
-
 
 route('GET','/api/public/schools/{id}/company', function($p,$b){
   $row=Db::one("SELECT s.id,s.name,s.code,s.address school_address,c.id company_id,c.title company_title,c.manager_name,c.phone,c.address company_address FROM schools s LEFT JOIN companies c ON c.id=s.company_id WHERE s.id=?",[(int)$p['id']]);
@@ -2875,8 +3037,7 @@ route('GET','/api/admin/complaints/report-summary', function($p,$b,$u){
 
 route('GET','/api/admin/complaints/export', function($p,$b,$u){
   _ensure_complaints_tables(); _complaint_role_guard($u,false); $rows=Db::all(_complaint_row_sql()." ORDER BY co.id DESC LIMIT 5000");
-  header('Content-Type: text/csv; charset=UTF-8'); header('Content-Disposition: attachment; filename=complaints-report.csv'); echo "\xEF\xBB\xBF"; $out=fopen('php://output','w');
-  fputcsv($out,['کد پیگیری','تاریخ ثبت','شاکی','موبایل','مدرسه','شرکت','موضوع','وضعیت','مرحله','مهلت شرکت']); foreach($rows as $r) fputcsv($out,[$r['tracking_code'],$r['created_at'],$r['complainant_name'],$r['mobile'],$r['school_name'],$r['company_title'],$r['subject'],_complaint_status_label($r['status']),$r['workflow_stage'],$r['company_due_at']]); fclose($out); exit;
+  $headers=['کد پیگیری','تاریخ ثبت','شاکی','موبایل','مدرسه','شرکت','موضوع','وضعیت','مرحله','مهلت شرکت']; $out=[]; foreach($rows as $r) $out[]=[$r['tracking_code'],$r['created_at'],$r['complainant_name'],$r['mobile'],$r['school_name'],$r['company_title'],$r['subject'],_complaint_status_label($r['status']),$r['workflow_stage'],$r['company_due_at']]; _xlsx_download('complaints-report.xlsx',$headers,$out,'شکایات','گزارش شکایات سامانه','سامانه مدیریت شرکت‌های حمل‌ونقل دانش‌آموزی مشهد');
 }, false, 'admin');
 
 route('GET','/api/admin/complaints/report-settings', function($p,$b,$u){ _ensure_complaints_tables(); _complaint_role_guard($u,true); return Db::one("SELECT * FROM complaint_report_settings WHERE id=1"); }, false, 'admin');
@@ -3312,9 +3473,8 @@ route('GET','/api/admin/company-reservations/{id}', function($p,$b,$u){
 route('GET','/api/admin/company-reservations/{id}/export', function($p,$b,$u){
   _ensure_company_capacity_tables(); $year=$_GET['year']??'next'; $cid=(int)$p['id']; _ensure_company_reservations_prefilled($cid,$year,null,$u['id']??null); $sum=_capacity_summary($cid,$year);
   $rows=Db::all("SELECT s.id,s.code,s.name,s.student_count,s.gender,s.level,s.address,s.lat,s.lng,d.title district_title,r.reserved_student_count FROM company_school_reservations r JOIN schools s ON s.id=r.school_id LEFT JOIN districts d ON d.id=s.district_id WHERE r.company_id=? AND r.academic_year=? ORDER BY s.name",[$cid,$year]);
-  header('Content-Type: text/csv; charset=UTF-8'); header('Content-Disposition: attachment; filename="company_reservations_'.$cid.'.csv"'); echo "\xEF\xBB\xBF"; $out=fopen('php://output','w');
-  fputcsv($out,['شرکت',$sum['company']['title'],'ظرفیت',$sum['capacity'],'حداقل مجاز',$sum['allowed_min_students'],'حداکثر مجاز',$sum['allowed_max_students'],'مجموع رزرو',$sum['reserved_students']]); fputcsv($out,[]);
-  fputcsv($out,['کد یکتا','نام مدرسه','ناحیه','جنسیت','مقطع','تعداد کل دانش‌آموز','تعداد رزروشده برای شرکت','آدرس','عرض','طول']); foreach($rows as $r) fputcsv($out,[$r['code'],$r['name'],$r['district_title'],$r['gender'],$r['level'],$r['student_count'],$r['reserved_student_count'],$r['address'],$r['lat'],$r['lng']]); fclose($out); exit;
+  $out=[]; foreach($rows as $r) $out[]=[$r['code'],$r['name'],$r['district_title'],$r['gender'],$r['level'],$r['student_count'],$r['reserved_student_count'],$r['address'],$r['lat'],$r['lng']];
+  _xlsx_download('company-reservations-'.$cid.'.xlsx',['کد یکتا','نام مدرسه','ناحیه','جنسیت','مقطع','تعداد کل دانش‌آموز','تعداد رزروشده برای شرکت','آدرس','عرض','طول'],$out,'رزرو مدارس شرکت','گزارش رزرو مدارس: '.($sum['company']['title']??''),'ظرفیت: '.($sum['capacity']??0).' | حداقل مجاز: '.($sum['allowed_min_students']??0).' | حداکثر مجاز: '.($sum['allowed_max_students']??0).' | مجموع رزرو: '.($sum['reserved_students']??0));
 }, false, 'admin');
 
 route('GET','/api/admin/reservation-coverage', function($p,$b,$u){

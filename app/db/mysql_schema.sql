@@ -168,3 +168,14 @@ CREATE TABLE IF NOT EXISTS password_resets (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- کاربر مدیر پیش‌فرض توسط اسکریپت نصب (public/install.php) با رمز واقعی ساخته می‌شود.
+-- آمار بازدید عمومی سایت
+CREATE TABLE IF NOT EXISTS site_visit_logs (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  visitor_hash CHAR(64) NOT NULL,
+  page_path VARCHAR(255) NOT NULL DEFAULT '/',
+  referrer VARCHAR(500) NULL,
+  user_agent VARCHAR(500) NULL,
+  visited_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_svl_visited_at (visited_at),
+  INDEX idx_svl_visitor_date (visitor_hash, visited_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
