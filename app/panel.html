@@ -742,6 +742,9 @@ function applyPublicFeatureFlags(){
   const enabled=(k)=>!!(f[k]?.enabled ?? true);
   const costBox=document.getElementById('publicCostBox'); if(costBox) costBox.style.display=enabled('public_cost_calculator_map')?'':'none';
   const quickCostBox=document.getElementById('publicQuickCostBox'); if(quickCostBox) quickCostBox.style.display=enabled('public_cost_calculator_quick')?'':'none';
+  document.querySelectorAll('[data-feature]').forEach(function(el){
+    const key=el.getAttribute('data-feature'); if(key) el.classList.toggle('hidden', !enabled(key));
+  });
 }
 async function bootPublic(){
   showPublic();
@@ -832,7 +835,7 @@ function schoolMarkerVisual(s){const photo=schoolPhotoUrl(s);return schoolPhotoM
 function schoolPopupHtml(s){
   const photo=schoolPhotosVisible()?schoolPhotoUrl(s):'';
   const photoHtml=photo?`<img src="${esc(photo)}" alt="تصویر سردر ${esc(s.name||'مدرسه')}" loading="lazy" style="width:100%;height:130px;object-fit:cover;border-radius:10px;margin-bottom:8px;border:1px solid var(--line)" onerror="this.style.display='none'">`:'';
-  return `<div class="schoolPopup">${photoHtml}<b>${esc(s.name)}</b><br>مقطع: ${esc(s.level||'—')}<br>جنسیت: ${esc(s.gender||'—')}<br>تعداد دانش‌آموزان: ${esc(s.student_count ?? '—')}<br>تعداد رانندگان: ${esc(s.driver_count ?? '—')}<br>شرکت سرویس‌دهنده: ${esc(s.company_title||'—')}<br>آدرس مدرسه: ${esc(s.address||'—')}<br><button class="btn sm" onclick="showCompanyInfo(${s.company_id})">اطلاعات بیشتر</button><button class="btn sm secondary" onclick="selectSchoolForCost(${s.id})">محاسبه مسیر</button></div>`;
+  return `<div class="schoolPopup">${photoHtml}<b>${esc(s.name)}</b><br>مقطع: ${esc(s.level||'—')}<br>جنسیت: ${esc(s.gender||'—')}<br>شرکت سرویس‌دهنده: ${esc(s.company_title||'—')}<br>آدرس مدرسه: ${esc(s.address||'—')}<br><button class="btn sm" onclick="showCompanyInfo(${s.company_id})">نمایش اطلاعات شرکت</button></div>`;
 }
 function renderSchoolMarkers(rows, fit=false){
   publicMapReady(); clearPublicLayers({keepRoute:true});
@@ -841,12 +844,6 @@ function renderSchoolMarkers(rows, fit=false){
     if(s.lat && s.lng){
       const m = PUBLIC_MAP.addMarker(s.lat, s.lng, schoolPopupHtml(s), '#0e8a6a', schoolMarkerVisual(s));
       m.__schoolId = s.id; m.__school = s; PUBLIC_MARKERS.push(m);
-    }
-    // موقعیت مکانی شرکت ارائه‌دهندهٔ سرویس همین مدرسه نیز روی نقشه نمایش داده می‌شود
-    if(s.company_id && s.company_lat && s.company_lng && !seenCompanies.has(String(s.company_id))){
-      seenCompanies.add(String(s.company_id));
-      const cm = PUBLIC_MAP.addMarker(s.company_lat, s.company_lng, companyPopupHtml({id:s.company_id, title:s.company_title}), '#f6b400', '🏢');
-      cm.__companyId = s.company_id; COMPANY_MARKERS.push(cm);
     }
   });
   const all=[...PUBLIC_MARKERS, ...COMPANY_MARKERS];
@@ -862,7 +859,7 @@ async function showCompanyInfo(id){
   if(!id) return;
   try{
     const c = await publicApi('/public/company/' + id);
-    showModal(`<h3>${esc(c.title)}</h3><div class="companyInfoModal" style="font-size:13px;line-height:2.1;direction:rtl;text-align:right;font-family:Vazirmatn,Vazir,Tahoma"><div>مدیرعامل: ${esc(c.manager_name||'—')}</div><div>موبایل مدیرعامل: ${esc(c.ceo_mobile||'—')}</div><div>تلفن ثابت: ${esc(c.phone||'—')}</div><div>آدرس: ${esc(c.address||'—')}</div></div><div class="modalActions"><button class="btn secondary" onclick="closeModal()">بستن</button>${c.lat && c.lng ? `<button class="btn" onclick="closeModal();showCompanyOnPublicMap(${c.lat},${c.lng},'${esc(c.title).replace(/'/g,"\\'")}')">نمایش شرکت روی نقشه</button>` : ''}</div>`);
+    showModal(`<h3>${esc(c.title)}</h3><div class="companyInfoModal" style="font-size:13px;line-height:2.1;direction:rtl;text-align:right;font-family:Vazirmatn,Vazir,Tahoma"><div>مدیرعامل: ${esc(c.manager_name||'—')}</div><div>موبایل مدیرعامل: ${esc(c.ceo_mobile||'—')}</div><div>تلفن ثابت: ${esc(c.phone||'—')}</div><div>آدرس: ${esc(c.address||'—')}</div></div><div class="modalActions"><button class="btn secondary" onclick="closeModal()">بستن</button></div>`);
   }catch(e){ toast(e.message,true); }
 }
 function showCompanyOnPublicMap(lat,lng,title){ publicMapReady(); clearPublicLayers({keepRoute:true}); const m=PUBLIC_MAP.addMarker(lat,lng, `<div class="companyMarkerPopup"><b>🏢 ${esc(title)}</b></div>`, '#f6b400','🏢'); COMPANY_MARKERS=[m]; PUBLIC_MAP.raw.setView([lat,lng],16); m.openPopup(); }
