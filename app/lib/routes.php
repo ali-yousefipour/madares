@@ -1304,8 +1304,17 @@ route('GET', '/api/public/schools/map', function ($p, $b) {
 
 route('GET', '/api/public/company/{id}', function ($p, $b) {
   _ensure_company_columns();
-  $row = Db::one("SELECT id,title,manager_name,ceo_mobile,phone,address,lat,lng FROM companies WHERE id=? AND is_active=1", [(int)$p['id']]);
+  $row = Db::one("SELECT id,title,manager_name,ceo_mobile,phone,address,lat,lng,custom_fields FROM companies WHERE id=? AND is_active=1", [(int)$p['id']]);
   if (!$row) Http::error('شرکت یافت نشد', 404);
+  $cf = [];
+  if (!empty($row['custom_fields'])) {
+    $decoded = json_decode((string)$row['custom_fields'], true);
+    if (is_array($decoded)) $cf = $decoded;
+  }
+  $row['custom_fields'] = $cf;
+  foreach (['photo_url','photo_path','image_url','image_path','company_photo','company_photo_path'] as $k) {
+    if (!empty($cf[$k])) { $row['photo_url'] = $cf[$k]; break; }
+  }
   return $row;
 }, true);
 
