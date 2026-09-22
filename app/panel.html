@@ -751,6 +751,7 @@ function showSchoolCompanyOnMap(s){
   COMPANY_MARKERS=[];
   const cm=PUBLIC_MAP.addMarker(s.company_lat,s.company_lng,companyPopupHtml({id:s.company_id,title:s.company_title}),'#f6b400','🏢');
   cm.__companyId=s.company_id;
+  cm.on('click',()=>loadCompanyMarkerInfo(cm,s.company_id,{id:s.company_id,title:s.company_title}));
   COMPANY_MARKERS.push(cm);
 }
 function renderSchoolMarkers(rows, fit=false){
@@ -770,12 +771,24 @@ function focusPublicSchool(id){
   if(!m){ const s=(ALL_PUBLIC_SCHOOLS||[]).find(x=>String(x.id)===String(id)); if(s){ renderSchoolMarkers([s],true); m=PUBLIC_MARKERS[0]; } }
   if(m){ PUBLIC_MAP.raw.setView(m.getLatLng(),16); m.openPopup(); }
 }
-function companyPopupHtml(c){ return `<div class="companyMarkerPopup"><b>🏢 ${esc(c.title||'')}</b><br>شرکت سرویس‌دهندهٔ مدرسه<br><button class="btn sm" onclick="showCompanyInfo(${c.id})">اطلاعات کامل شرکت</button></div>`; }
-async function showCompanyInfo(id){
-  if(!id) return;
+function companyPhotoUrl(c){
+  const raw=String(c?.photo_url||c?.photo_path||c?.image_url||c?.image_path||'').trim();
+  if(!raw)return '';
+  if(raw.startsWith('/api/media?')||raw.startsWith('http://')||raw.startsWith('https://'))return raw;
+  return API+'/media?path='+encodeURIComponent(raw);
+}
+function companyPopupHtml(c,details=null){
+  const x=details||c||{};
+  const photo=companyPhotoUrl(x);
+  const photoHtml=photo?`<img src="${esc(photo)}" alt="تصویر شرکت ${esc(x.title||'')}" loading="lazy" style="width:100%;height:130px;object-fit:cover;border-radius:10px;margin-bottom:8px;border:1px solid var(--line)" onerror="this.style.display='none'">`:'';
+  return `<div class="companyMarkerPopup">${photoHtml}<b>🏢 ${esc(x.title||'')}</b><br><span>مدیرعامل: ${esc(x.manager_name||'—')}</span><br><span>موبایل مدیرعامل: ${esc(x.ceo_mobile||'—')}</span><br><span>تلفن ثابت: ${esc(x.phone||'—')}</span><br><span>آدرس: ${esc(x.address||'—')}</span></div>`;
+}
+async function loadCompanyMarkerInfo(marker,id,base){
+  if(!id)return;
   try{
-    const c = await publicApi('/public/company/' + id);
-    showModal(`<h3>${esc(c.title)}</h3><div class="companyInfoModal" style="font-size:13px;line-height:2.1;direction:rtl;text-align:right;font-family:Vazirmatn,Vazir,Tahoma"><div>مدیرعامل: ${esc(c.manager_name||'—')}</div><div>موبایل مدیرعامل: ${esc(c.ceo_mobile||'—')}</div><div>تلفن ثابت: ${esc(c.phone||'—')}</div><div>آدرس: ${esc(c.address||'—')}</div></div><div class="modalActions"><button class="btn secondary" onclick="closeModal()">بستن</button>${c.lat && c.lng ? `<button class="btn" onclick="closeModal();showCompanyOnPublicMap(${c.lat},${c.lng},'${esc(c.title).replace(/'/g,"\\'")}')">نمایش شرکت روی نقشه</button>` : ''}</div>`);
+    const details=await publicApi('/public/company/'+id);
+    marker.setPopupContent(companyPopupHtml({...base,...details}));
+    marker.openPopup();
   }catch(e){ toast(e.message,true); }
 }
 function showCompanyOnPublicMap(lat,lng,title){ publicMapReady(); clearPublicLayers({keepRoute:true}); const m=PUBLIC_MAP.addMarker(lat,lng, `<div class="companyMarkerPopup"><b>🏢 ${esc(title)}</b></div>`, '#f6b400','🏢'); COMPANY_MARKERS=[m]; PUBLIC_MAP.raw.setView([lat,lng],16); m.openPopup(); }
