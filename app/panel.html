@@ -839,27 +839,45 @@ function schoolPopupHtml(s){
 }
 function renderSchoolMarkers(rows, fit=false){
   publicMapReady(); clearPublicLayers({keepRoute:true});
-  const seenCompanies = new Set();
   rows.forEach(s=>{
     if(s.lat && s.lng){
       const m = PUBLIC_MAP.addMarker(s.lat, s.lng, schoolPopupHtml(s), '#0e8a6a', schoolMarkerVisual(s));
       m.__schoolId = s.id; m.__school = s; PUBLIC_MARKERS.push(m);
+      m.on('click', function(){ showCompanyForSelectedSchool(s); });
     }
   });
   const all=[...PUBLIC_MARKERS, ...COMPANY_MARKERS];
   if(fit && all.length){ try{ PUBLIC_MAP.raw.fitBounds(L.featureGroup(all).getBounds(), {padding:[35,35]}); }catch(e){} }
+}
+async function showCompanyForSelectedSchool(s){
+  if(!s || !s.company_id) return;
+  try{
+    clearCompanyMarkers();
+    const c=await publicApi('/public/company/'+s.company_id);
+    if(!c || !c.lat || !c.lng) return;
+    const photo=c.photo_url||'';
+    const photoHtml=photo ? `<img src="${esc(photo)}" alt="تصویر شرکت" loading="lazy" style="width:100%;height:120px;object-fit:cover;border-radius:10px;margin-bottom:8px;border:1px solid var(--line)" onerror="this.style.display='none'">` : '';
+    const html=`<div class="companyMarkerPopup">${photoHtml}<b>🏢 ${esc(c.title||'')}</b><br>مدیرعامل: ${esc(c.manager_name||'—')}<br>موبایل مدیرعامل: ${esc(c.ceo_mobile||'—')}<br>تلفن ثابت: ${esc(c.phone||'—')}<br>آدرس: ${esc(c.address||'—')}</div>`;
+    const cm=PUBLIC_MAP.addMarker(Number(c.lat),Number(c.lng),html,'#f6b400','🏢');
+    cm.__companyId=c.id; COMPANY_MARKERS=[cm];
+  }catch(e){ toast(e.message,true); }
+}
+function clearCompanyMarkers(){
+  (COMPANY_MARKERS||[]).forEach(function(m){ try{ PUBLIC_MAP.raw.removeLayer(m); }catch(e){} });
+  COMPANY_MARKERS=[];
 }
 function focusPublicSchool(id){
   let m = PUBLIC_MARKERS.find(x=>String(x.__schoolId)===String(id));
   if(!m){ const s=(ALL_PUBLIC_SCHOOLS||[]).find(x=>String(x.id)===String(id)); if(s){ renderSchoolMarkers([s], true); m=PUBLIC_MARKERS[0]; } }
   if(m){ PUBLIC_MAP.raw.setView(m.getLatLng(), 16); m.openPopup(); }
 }
-function companyPopupHtml(c){ return `<div class="companyMarkerPopup"><b>🏢 ${esc(c.title||'')}</b><br>شرکت سرویس‌دهندهٔ مدرسه<br><button class="btn sm" onclick="showCompanyInfo(${c.id})">اطلاعات کامل شرکت</button></div>`; }
+function companyPopupHtml(c){ return `<div class="companyMarkerPopup"><b>🏢 ${esc(c.title||'')}</b><br>شرکت سرویس‌دهندهٔ مدرسه</div>`; }
 async function showCompanyInfo(id){
   if(!id) return;
   try{
     const c = await publicApi('/public/company/' + id);
-    showModal(`<h3>${esc(c.title)}</h3><div class="companyInfoModal" style="font-size:13px;line-height:2.1;direction:rtl;text-align:right;font-family:Vazirmatn,Vazir,Tahoma"><div>مدیرعامل: ${esc(c.manager_name||'—')}</div><div>موبایل مدیرعامل: ${esc(c.ceo_mobile||'—')}</div><div>تلفن ثابت: ${esc(c.phone||'—')}</div><div>آدرس: ${esc(c.address||'—')}</div></div><div class="modalActions"><button class="btn secondary" onclick="closeModal()">بستن</button></div>`);
+    const photo=c.photo_url||''; const photoHtml=photo ? \`<img src="${esc(photo)}" alt="تصویر شرکت" loading="lazy" style="width:100%;height:150px;object-fit:cover;border-radius:10px;margin-bottom:10px;border:1px solid var(--line)" onerror="this.style.display='none'">\` : '';
+    showModal(\`<h3>${esc(c.title)}</h3>${photoHtml}<div class="companyInfoModal" style="font-size:13px;line-height:2.1;direction:rtl;text-align:right;font-family:Vazirmatn,Vazir,Tahoma"><div>مدیرعامل: ${esc(c.manager_name||'—')}</div><div>موبایل مدیرعامل: ${esc(c.ceo_mobile||'—')}</div><div>تلفن ثابت: ${esc(c.phone||'—')}</div><div>آدرس: ${esc(c.address||'—')}</div></div><div class="modalActions"><button class="btn secondary" onclick="closeModal()">بستن</button></div>\`);
   }catch(e){ toast(e.message,true); }
 }
 function showCompanyOnPublicMap(lat,lng,title){ publicMapReady(); clearPublicLayers({keepRoute:true}); const m=PUBLIC_MAP.addMarker(lat,lng, `<div class="companyMarkerPopup"><b>🏢 ${esc(title)}</b></div>`, '#f6b400','🏢'); COMPANY_MARKERS=[m]; PUBLIC_MAP.raw.setView([lat,lng],16); m.openPopup(); }
