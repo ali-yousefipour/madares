@@ -1,6 +1,23 @@
 # اجازهٔ عبور هدر Authorization به PHP
 RewriteEngine On
 
+# ---------- محافظت امنیتی ----------
+<FilesMatch "^(install|setup-libs)\.php$">
+  Require all denied
+</FilesMatch>
+<FilesMatch "\.(env|sql|log|bak|old|ini|yml|yaml|md)$">
+  Require all denied
+</FilesMatch>
+Options -Indexes
+ServerSignature Off
+<IfModule mod_headers.c>
+  Header always set X-Frame-Options "DENY"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "geolocation=(self), camera=(self), microphone=()"
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" env=HTTPS
+</IfModule>
+
 # اجبار HTTPS (رفع هشدار "insecure connection" و جلوگیری از افشای توکن روی HTTP)
 RewriteCond %{HTTPS} off
 RewriteCond %{HTTP:X-Forwarded-Proto} !https
