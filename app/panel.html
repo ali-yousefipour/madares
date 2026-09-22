@@ -56,7 +56,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold-2);
 .btn.secondary:hover{background:#e7e7ea}
 .btn.danger{background:var(--danger);color:#fff;box-shadow:none}
 .btn.sm{padding:6px 12px;font-size:12px;border-radius:8px}
-.hidden{display:none !important}
+.hidden{display:none !important}.public-feature-gated{display:none !important}
 
 
 
@@ -429,8 +429,8 @@ table{border-spacing:0 7px;border-collapse:separate}thead th{background:#eef3f9;
 <body>
 
 <div id="publicView">
-  <div class="publicTop"><div class="publicBrand"><img class="dynamicSiteLogo" src="assets/icon-mark.png" alt="لوگو"><div>سامانه سرویس حمل و نقل دانش آموزی مشهد</div></div><div class="publicAuthActions"><button class="btn dark sm publicLogin" onclick="showLogin()">ورود به سایت</button><button class="btn sm publicUserLogin" onclick="openComplainantPortal()">ورود / ثبت‌نام کاربران</button></div></div>
-  <div class="publicHero"><h1>جستجوی عمومی مدارس و شرکت سرویس‌دهنده</h1><p>نام مدرسه موردنظر را جستجو کنید. با پیدا شدن مدرسه، موقعیت مدرسه و مشخصات آن به همراه موقعیت شرکت سرویس‌دهندهٔ آن روی نقشه نمایش داده می‌شود.</p><div class="complaintCta"><button class="btn" onclick="openComplainantPortal(false)">ثبت شکایت</button><button class="btn secondary" onclick="openComplaintTracking()">پیگیری شکایت</button></div></div>
+  <div class="publicTop"><div class="publicBrand"><img class="dynamicSiteLogo" src="assets/icon-mark.png" alt="لوگو"><div>سامانه سرویس حمل و نقل دانش آموزی مشهد</div></div><div class="publicAuthActions"><button class="btn dark sm publicLogin" onclick="showLogin()">ورود به سایت</button><button class="btn sm publicUserLogin public-feature-gated" data-public-feature="complaints" onclick="openComplainantPortal()">ورود / ثبت‌نام کاربران</button></div></div>
+  <div class="publicHero"><h1>جستجوی عمومی مدارس و شرکت سرویس‌دهنده</h1><p>نام مدرسه موردنظر را جستجو کنید. با پیدا شدن مدرسه، موقعیت مدرسه و مشخصات آن به همراه موقعیت شرکت سرویس‌دهندهٔ آن روی نقشه نمایش داده می‌شود.</p><div class="complaintCta"><button class="btn public-feature-gated" data-public-feature="complaints" onclick="openComplainantPortal(false)">ثبت شکایت</button><button class="btn secondary public-feature-gated" data-public-feature="complaints" onclick="openComplaintTracking()">پیگیری شکایت</button></div></div>
   <div class="panel publicUnifiedPanel" id="publicUnifiedPanel">
     <div class="publicSectionHead"><div><h2>جستجوی مدرسه و محاسبه هزینه سرویس</h2><p>برای مشاهدهٔ نتیجه، نام مدرسه را در کادر جستجو وارد کنید؛ می‌توانید نتایج را با ناحیه، مقطع و جنسیت نیز محدودتر کنید.</p></div></div>
     <div class="publicFilters">
@@ -744,6 +744,9 @@ function applyPublicFeatureFlags(){
   const quickCostBox=document.getElementById('publicQuickCostBox'); if(quickCostBox) quickCostBox.style.display=enabled('public_cost_calculator_quick')?'':'none';
   document.querySelectorAll('[data-feature]').forEach(function(el){
     const key=el.getAttribute('data-feature'); if(key) el.classList.toggle('hidden', !enabled(key));
+  });
+  document.querySelectorAll('[data-public-feature]').forEach(function(el){
+    const key=el.getAttribute('data-public-feature'); if(key) el.classList.toggle('public-feature-gated', !enabled(key));
   });
 }
 async function bootPublic(){
