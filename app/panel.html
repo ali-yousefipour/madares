@@ -1804,14 +1804,14 @@ async function renderReservationCoverage(){
   try{ const levels=await publicApi('/education-levels'); document.getElementById('covLevel').innerHTML='<option value="">همه مقاطع</option>'+levels.map(l=>`<option value="${esc(l.title)}">${esc(l.title)}</option>`).join(''); }catch(e){}
   loadCoverage();
 }
+function coverageBadge(r){return r.coverage_status==='single'?'✅ فقط یک شرکت':(r.coverage_status==='multi'?'🔴 چند شرکت':'🟡 بدون رزرو');}
 async function loadCoverage(){
   const qs=new URLSearchParams(); ['Q','District','Gender','Level'].forEach(k=>{ const el=document.getElementById('cov'+k); if(el&&el.value) qs.set(k==='Q'?'q':k.toLowerCase()+'_id',el.value); });
   if(document.getElementById('covGender')?.value) qs.set('gender',document.getElementById('covGender').value);
   if(document.getElementById('covLevel')?.value) qs.set('level',document.getElementById('covLevel').value);
   const rows=await api('/admin/reservation-coverage?'+qs.toString());
   const color=r=>r.coverage_status==='single'?'#e9fff4':(r.coverage_status==='multi'?'#fff0f0':'#fff8db');
-  const badge=r=>r.coverage_status==='single'?'✅ فقط یک شرکت':(r.coverage_status==='multi'?'🔴 چند شرکت':'🟡 بدون رزرو');
-  const coverageEl=document.getElementById('coverageTbl'); if(!coverageEl) return; coverageEl.innerHTML=`<table><thead><tr><th>وضعیت</th><th>کد</th><th>مدرسه</th><th>ناحیه</th><th>جنسیت</th><th>مقطع</th><th>تعداد شرکت رزروکننده</th><th>شرکت‌ها</th><th>دانش‌آموز کل</th><th>دانش‌آموز رزرو</th></tr></thead><tbody>${rows.map(r=>`<tr style="background:${color(r)}"><td>${badge(r)}</td><td>${esc(r.code)}</td><td>${esc(r.name)}</td><td>${esc(r.district_title||'—')}</td><td>${esc(r.gender||'—')}</td><td>${esc(r.level||'—')}</td><td>${Number(r.reserved_by_count||0).toLocaleString('fa-IR')}</td><td>${esc(r.company_titles||'—')}</td><td>${Number(r.student_count||0).toLocaleString('fa-IR')}</td><td>${Number(r.reserved_students_total||0).toLocaleString('fa-IR')}</td></tr>`).join('')||'<tr><td colspan=10>داده‌ای وجود ندارد</td></tr>'}</tbody></table>`;
+  const coverageEl=document.getElementById('coverageTbl'); if(!coverageEl) return; coverageEl.innerHTML=`<table><thead><tr><th>وضعیت</th><th>کد</th><th>مدرسه</th><th>ناحیه</th><th>جنسیت</th><th>مقطع</th><th>تعداد شرکت رزروکننده</th><th>شرکت‌ها</th><th>دانش‌آموز کل</th><th>دانش‌آموز رزرو</th></tr></thead><tbody>${rows.map(r=>`<tr style="background:${color(r)}"><td>${coverageBadge(r)}</td><td>${esc(r.code)}</td><td>${esc(r.name)}</td><td>${esc(r.district_title||'—')}</td><td>${esc(r.gender||'—')}</td><td>${esc(r.level||'—')}</td><td>${Number(r.reserved_by_count||0).toLocaleString('fa-IR')}</td><td>${esc(r.company_titles||'—')}</td><td>${Number(r.student_count||0).toLocaleString('fa-IR')}</td><td>${Number(r.reserved_students_total||0).toLocaleString('fa-IR')}</td></tr>`).join('')||'<tr><td colspan=10>داده‌ای وجود ندارد</td></tr>'}</tbody></table>`;
   renderCoverageMap(rows);
 }
 function renderCoverageMap(rows){
@@ -1823,7 +1823,7 @@ function renderCoverageMap(rows){
   const bounds=[];
   pts.forEach(r=>{
     const n=Number(r.reserved_by_count||0); const col=n===0?'#d9a600':(n===1?'#0e8a6a':'#d23a3a');
-    const popup=`<div style="min-width:220px;direction:rtl;text-align:right;font-family:Vazirmatn,Vazir,Tahoma;line-height:2"><b>${esc(r.name)}</b><br>کد: ${esc(r.code||'—')}<br>ناحیه: ${esc(r.district_title||'—')} | مقطع: ${esc(r.level||'—')}<br>وضعیت: ${badge(r)}<br>شرکت‌ها: ${esc(r.company_titles||'—')}<br>دانش‌آموز: ${Number(r.student_count||0).toLocaleString('fa-IR')}</div>`;
+    const popup=`<div style="min-width:220px;direction:rtl;text-align:right;font-family:Vazirmatn,Vazir,Tahoma;line-height:2"><b>${esc(r.name)}</b><br>کد: ${esc(r.code||'—')}<br>ناحیه: ${esc(r.district_title||'—')} | مقطع: ${esc(r.level||'—')}<br>وضعیت: ${coverageBadge(r)}<br>شرکت‌ها: ${esc(r.company_titles||'—')}<br>دانش‌آموز: ${Number(r.student_count||0).toLocaleString('fa-IR')}</div>`;
     map.addMarker(Number(r.lat),Number(r.lng),popup,col,'🏫'); bounds.push([Number(r.lat),Number(r.lng)]);
   });
   if(bounds.length>1) map.raw.fitBounds(L.latLngBounds(bounds),{padding:[45,45]});
@@ -2164,7 +2164,7 @@ async function loadSchoolReservationStatus(){
   const rows=await api('/admin/school-reservation-status?'+qs.toString());
   const badge=r=>r.status==='none'?'🟡 بدون رزرو':(r.status==='partial'?'🔵 بخشی رزرو شده':(r.status==='complete'?'🟢 تکمیل':'🔴 بیش از ظرفیت دانش‌آموز'));
   const color=r=>r.status==='over'?'#fff1f1':(r.status==='complete'?'#effaf5':(r.status==='none'?'#fff9e8':'#eef6ff'));
-  const statusEl=document.getElementById('schoolReservationStatusTbl'); if(!statusEl) return; statusEl.innerHTML=`<table><thead><tr><th>وضعیت</th><th>کد</th><th>مدرسه</th><th>ناحیه</th><th>جنسیت</th><th>مقطع</th><th>کل دانش‌آموز</th><th>رزرو شده</th><th>باقی‌مانده</th><th>شرکت‌های رزروکننده</th></tr></thead><tbody>${rows.map(r=>`<tr style="background:${color(r)}"><td>${badge(r)}</td><td>${esc(r.code)}</td><td>${esc(r.name)}</td><td>${esc(r.district_title||'—')}</td><td>${esc(r.gender||'—')}</td><td>${esc(r.level||'—')}</td><td>${Number(r.student_count||0).toLocaleString('fa-IR')}</td><td>${Number(r.reserved_students_total||0).toLocaleString('fa-IR')}</td><td>${Number(r.remaining_students||0).toLocaleString('fa-IR')}</td><td>${esc(r.company_titles||'—')}</td></tr>`).join('')||'<tr><td colspan=10>داده‌ای وجود ندارد</td></tr>'}</tbody></table>`;
+  const statusEl=document.getElementById('schoolReservationStatusTbl'); if(!statusEl) return; statusEl.innerHTML=`<table><thead><tr><th>وضعیت</th><th>کد</th><th>مدرسه</th><th>ناحیه</th><th>جنسیت</th><th>مقطع</th><th>کل دانش‌آموز</th><th>رزرو شده</th><th>باقی‌مانده</th><th>شرکت‌های رزروکننده</th></tr></thead><tbody>${rows.map(r=>`<tr style="background:${color(r)}"><td>${coverageBadge(r)}</td><td>${esc(r.code)}</td><td>${esc(r.name)}</td><td>${esc(r.district_title||'—')}</td><td>${esc(r.gender||'—')}</td><td>${esc(r.level||'—')}</td><td>${Number(r.student_count||0).toLocaleString('fa-IR')}</td><td>${Number(r.reserved_students_total||0).toLocaleString('fa-IR')}</td><td>${Number(r.remaining_students||0).toLocaleString('fa-IR')}</td><td>${esc(r.company_titles||'—')}</td></tr>`).join('')||'<tr><td colspan=10>داده‌ای وجود ندارد</td></tr>'}</tbody></table>`;
 }
 
 async function fillReservationsFromCurrentSchools(){
