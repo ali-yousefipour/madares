@@ -1220,14 +1220,14 @@ async function renderDashboard() {
   try { [stats, mapPoints] = await Promise.all([api('/admin/stats'), api('/admin/schools/map')]); }
   catch (e) { toast(e.message, true); return; }
   const pct = stats.total_schools ? Math.round(stats.done / stats.total_schools * 100) : 0;
-  document.getElementById('progressPanel').innerHTML = `<h3>پیشرفت ثبت موقعیت مدارس</h3><div class="dashboardProgress"><div class="dashboardProgressBar"><i style="width:${pct}%"></i></div><div class="dashboardProgressPct">${pct}٪</div></div><div style="font-size:11.5px;color:var(--muted);margin-top:10px">${faNum(stats.done)} مدرسه از ${faNum(stats.total_schools)} مدرسه موقعیت خود را ثبت کرده‌اند.</div>`;
+  const progressEl=document.getElementById('progressPanel'); if(!progressEl) return; progressEl.innerHTML = `<h3>پیشرفت ثبت موقعیت مدارس</h3><div class="dashboardProgress"><div class="dashboardProgressBar"><i style="width:${pct}%"></i></div><div class="dashboardProgressPct">${pct}٪</div></div><div style="font-size:11.5px;color:var(--muted);margin-top:10px">${faNum(stats.done)} مدرسه از ${faNum(stats.total_schools)} مدرسه موقعیت خود را ثبت کرده‌اند.</div>`;
   const items=[
     ['🏢','تعداد شرکت‌ها',stats.companies],['🏫','تعداد مدارس',stats.total_schools],['🚕','تعداد رانندگان',stats.total_drivers],['🎒','تعداد دانش‌آموزان',stats.total_students],
     ['📨','شکایات دریافتی',stats.complaints_total||0],['📍','ثبت‌شده',stats.done],['⏳','باقی‌مانده',stats.pending],['👥','نمایندگان فعال',stats.reps]
   ];
-  document.getElementById('dashStats').innerHTML=items.map(x=>`<div class="dashboardStat"><div class="ico">${x[0]}</div><div class="v">${typeof x[2]==='number'?faNum(x[2]):esc(x[2]??'—')}</div><div class="l">${x[1]}</div></div>`).join('');
-  document.getElementById('byCompanyTbl').innerHTML=`<table><thead><tr><th>شرکت</th><th>مدارس</th><th>ثبت‌شده</th><th>پیشرفت</th></tr></thead><tbody>${(stats.by_company||[]).map(c=>`<tr><td>${esc(c.title)}</td><td>${faNum(c.total)}</td><td>${faNum(c.done||0)}</td><td><b>${c.total?Math.round((c.done||0)/c.total*100):0}٪</b></td></tr>`).join('')||'<tr><td colspan="4">داده‌ای موجود نیست</td></tr>'}</tbody></table>`;
-  document.getElementById('recentTbl').innerHTML=`<table><thead><tr><th>تاریخ</th><th>مدرسه</th><th>شرکت</th></tr></thead><tbody>${(stats.recent_activity||[]).slice(0,8).map(r=>`<tr><td>${fmtDate(r.created_at)}</td><td>${esc(r.school_name)}</td><td>${esc(r.company_title||'—')}</td></tr>`).join('')||'<tr><td colspan="3">فعالیتی ثبت نشده</td></tr>'}</tbody></table>`;
+  const dashStatsEl=document.getElementById('dashStats'); if(dashStatsEl) dashStatsEl.innerHTML=items.map(x=>`<div class="dashboardStat"><div class="ico">${x[0]}</div><div class="v">${typeof x[2]==='number'?faNum(x[2]):esc(x[2]??'—')}</div><div class="l">${x[1]}</div></div>`).join('');
+  const byCompanyEl=document.getElementById('byCompanyTbl'); if(byCompanyEl) byCompanyEl.innerHTML=`<table><thead><tr><th>شرکت</th><th>مدارس</th><th>ثبت‌شده</th><th>پیشرفت</th></tr></thead><tbody>${(stats.by_company||[]).map(c=>`<tr><td>${esc(c.title)}</td><td>${faNum(c.total)}</td><td>${faNum(c.done||0)}</td><td><b>${c.total?Math.round((c.done||0)/c.total*100):0}٪</b></td></tr>`).join('')||'<tr><td colspan="4">داده‌ای موجود نیست</td></tr>'}</tbody></table>`;
+  const recentEl=document.getElementById('recentTbl'); if(recentEl) recentEl.innerHTML=`<table><thead><tr><th>تاریخ</th><th>مدرسه</th><th>شرکت</th></tr></thead><tbody>${(stats.recent_activity||[]).slice(0,8).map(r=>`<tr><td>${fmtDate(r.created_at)}</td><td>${esc(r.school_name)}</td><td>${esc(r.company_title||'—')}</td></tr>`).join('')||'<tr><td colspan="3">فعالیتی ثبت نشده</td></tr>'}</tbody></table>`;
   const dashMap=createMap('map',{lat:36.297,lng:59.606,zoom:12});
   (mapPoints||[]).forEach(s=>{const color=s.location_status==='done'?'#2fbf71':'#e3a13e';const dashPhoto=schoolPhotosVisible()?schoolPhotoUrl(s):'';const popup=`<div style="min-width:190px;font-size:12.5px;line-height:1.9">${dashPhoto?`<img src="${esc(dashPhoto)}" loading="lazy" style="width:100%;height:110px;object-fit:cover;border-radius:9px;margin-bottom:7px" onerror="this.style.display='none'">`:''}<b style="font-size:13.5px">${esc(s.name)}</b><br>کد: ${esc(s.code)} | مقطع: ${esc(s.level||'—')}<br>دانش‌آموزان: ${esc(s.student_count??'—')} | رانندگان: ${esc(s.driver_count??'—')}<br>شرکت سرویس‌دهنده: ${esc(s.company_title||'—')}<br>آدرس: ${esc(s.address||'—')}</div>`;dashMap.addMarker(s.lat,s.lng,popup,color,schoolMarkerVisual(s));});
 }
@@ -2076,7 +2076,7 @@ async function renderSettings() {
   try { await loadServicePricingAdmin(); } catch (e) { console.warn('pricing load failed', e); toast('بارگذاری تنظیمات تعرفه ناموفق بود: ' + e.message, true); }
   try {
     const sc = await api('/admin/sms-config');
-    document.getElementById('setSmsEnabled').checked = !!sc.enabled;
+    const smsEnabledEl=document.getElementById('setSmsEnabled'); if(smsEnabledEl) smsEnabledEl.checked = !!sc.enabled;
     setVal('setSmsUser', sc.username || ''); setVal('setSmsLine', sc.line || '');
   } catch (e) { console.warn('sms-config load failed', e); }
   try {
