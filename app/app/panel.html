@@ -1,0 +1,1350 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>سامانهٔ مدیریت شرکت‌های سرویس مدارس مشهد</title>
+<link rel="icon" type="image/png" href="assets/icon-mark.png">
+<!-- فونت و نقشه ابتدا از خودِ هاست (vendor/) بارگذاری می‌شوند و فقط در صورت نبودن فایل محلی
+     به CDN عمومی سوییچ می‌کنند؛ این کار سرعت/پایداری را در شرایط محدودیت دسترسی به سرویس‌های
+     خارجی از داخل ایران تضمین می‌کند. راهنمای دانلود فایل‌های vendor در vendor/README.txt است. -->
+<link href="vendor/vazirmatn/Vazirmatn-font-face.css" rel="stylesheet" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css'">
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css" onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'">
+<script src="vendor/leaflet/leaflet.js" onerror="this.onerror=null;this.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'"></script>
+<!-- کیت رسمی نقشهٔ نشان روی Leaflet (از CDN داخلی خودِ نشان؛ همان L.Map/L.marker معمولی را گسترش می‌دهد،
+     فقط وقتی «نشان» به‌عنوان نقشه انتخاب شده استفاده می‌شود) -->
+<link rel="stylesheet" href="https://static.neshan.org/sdk/leaflet/v1.9.4/neshan-sdk/v1.0.8/index.css">
+<script src="https://static.neshan.org/sdk/leaflet/v1.9.4/neshan-sdk/v1.0.8/index.js"></script>
+<script>
+/* خوداتکایی آفلاین: اگر فایل‌های کتابخانه روی هاست نبودند و اینترنت وصل بود،
+   یک‌بار در پس‌زمینه از CDN روی هاست ذخیره می‌شوند تا دفعهٔ بعد حتی با کندی/قطعی
+   دسترسی به CDNهای خارجی، پنل و به‌خصوص نقشهٔ داشبورد از روی خود هاست بارگذاری شود. */
+(function(){ try{
+  fetch('vendor/leaflet/leaflet.js', {method:'HEAD', cache:'no-store'})
+    .then(function(r){ if(!r.ok){ fetch('setup-libs.php?auto=1').catch(function(){}); } })
+    .catch(function(){});
+}catch(e){} })();
+</script>
+<style>
+:root{
+  --ink:#17120a; --black:#0c0c0c; --black-2:#1a1a1a; --paper:#f6f7f9; --card:#ffffff;
+  --line:#ececec; --muted:#7a7a7a;
+  --gold:#fec617; --gold-2:#e0ab00; --gold-soft:#fff8e1; --gold-ink:#4a3a00;
+  --brand:#fec617; --brand-2:#e0ab00; --brand-soft:#fff8e1; /* نام‌های مستعار برای سازگاری با استایل‌های قبلی */
+  --ok:#2f8f3f; --ok-soft:#eef8ee; --warn:#9a7400; --warn-soft:#fff4d6; --danger:#d23a3a; --danger-soft:#fdeaea;
+  --shadow:0 12px 30px -14px rgba(12,12,12,.30); --shadow-sm:0 2px 8px -2px rgba(12,12,12,.10);
+  --r:16px; --r-sm:11px;
+  font-family:"Vazirmatn","Vazir",Tahoma,system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-size:14px;line-height:1.7}
+a{color:inherit;text-decoration:none}
+button{cursor:pointer;font-family:inherit}
+input,select,textarea{font-family:inherit;background:#fff;border:1px solid var(--line);color:var(--ink);border-radius:var(--r-sm);padding:9px 12px;font-size:13px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold-2);box-shadow:0 0 0 3px rgba(254,198,23,.25)}
+.btn{background:linear-gradient(135deg,var(--gold),var(--gold-2));color:#1a1400;border:none;border-radius:var(--r-sm);padding:10px 18px;font-weight:800;font-size:13px;box-shadow:0 8px 18px -10px rgba(224,171,0,.7);transition:filter .15s,transform .12s}
+.btn:hover{filter:brightness(1.05)}
+.btn:active{transform:translateY(1px)}
+.btn.dark{background:linear-gradient(135deg,var(--black-2),var(--black));color:#fff;box-shadow:0 8px 18px -10px rgba(0,0,0,.6)}
+.btn.secondary{background:#f1f1f3;color:var(--ink);border:1px solid var(--line);box-shadow:none}
+.btn.secondary:hover{background:#e7e7ea}
+.btn.danger{background:var(--danger);color:#fff;box-shadow:none}
+.btn.sm{padding:6px 12px;font-size:12px;border-radius:8px}
+.hidden{display:none !important}
+
+/* ---- Unified dashboard-style admin pages ---- */
+.adminPageHeader,.settingsHero,.hero{
+  display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin:0 0 16px;padding:22px 24px;
+  border:1px solid #dce5ef;border-radius:22px;
+  background:linear-gradient(135deg,#ffffff 0%,#f5f8fc 72%,#fff8df 100%);
+  box-shadow:0 14px 36px rgba(16,42,67,.08);
+}
+.adminPageHeader .adminPageTitle,.settingsHero h1,.hero h2{margin:0;font-size:22px;font-weight:950;color:#173653;display:flex;align-items:center;gap:10px}
+.adminPageHeader .adminPageTitle:before,.settingsHero h1:before,.hero h2:before{content:'';width:6px;height:30px;border-radius:99px;background:linear-gradient(#f7b500,#d99600);display:inline-block}
+.adminPageHeader p,.settingsHero p,.hero p{margin:6px 0 0;color:#687386;font-size:12px;line-height:1.8}
+.adminPageHeader .adminPageStats{display:flex;gap:8px;flex-wrap:wrap}
+.adminPageHeader .miniStat{min-width:92px;padding:9px 12px;border-radius:13px;background:#fff;border:1px solid #e1e8f0;text-align:center}
+.adminPageHeader .miniStat b{display:block;color:#173653;font-size:16px}.adminPageHeader .miniStat span{display:block;color:#758196;font-size:10px;margin-top:2px}
+.settingsHeroBadge{padding:11px 15px;border-radius:15px;background:#fff;border:1px solid #e4eaf1;font-weight:800;color:#183a56}
+.settingsPage>.pageTitle{display:none}
+.adminPageToolbar{border-radius:18px!important;border:1px solid #dfe7ef!important;background:#fff!important;box-shadow:0 8px 24px rgba(19,48,77,.05)!important}
+.adminDataPanel,.settingsCard,.dashboardPanel{border-radius:20px!important}
+.pageTitle{font-size:21px!important;font-weight:950!important;color:#173653!important}
+@media(max-width:800px){.adminPageHeader,.settingsHero,.hero{align-items:flex-start;flex-direction:column}.adminPageHeader .adminPageStats{width:100%}.adminPageHeader .miniStat{flex:1}}
+
+/* ---- Login ---- */
+#loginView{min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 30% 20%,#232323,var(--black) 65%)}
+.loginBox{background:var(--card);border-radius:20px;padding:36px;width:360px;box-shadow:var(--shadow)}
+.loginBox .brandRow{display:flex;flex-direction:column;align-items:center;margin-bottom:6px}
+.loginBox .brandRow img{width:64px;margin-bottom:12px}
+.loginBox h1{color:var(--ink);font-size:16px;text-align:center;margin:0 0 4px;font-weight:800}
+.loginBox p{color:var(--muted);text-align:center;font-size:12px;margin:0 0 22px}
+.loginBox label{display:block;font-size:12px;color:var(--muted);font-weight:600;margin:14px 0 6px}
+.loginBox input{width:100%}
+.loginBox .btn{width:100%;margin-top:22px;padding:13px}
+.err{color:var(--danger);font-size:12px;margin-top:10px;text-align:center;background:var(--danger-soft);padding:8px;border-radius:8px}
+
+/* ---- Layout ---- */
+#appView{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+#sidebar{background:linear-gradient(180deg,var(--black),var(--black-2));padding:16px 12px;position:sticky;top:0;height:100vh;overflow-y:auto;color:#c9c9c9}
+#sidebar .brand{display:flex;align-items:center;gap:9px;color:#fff;font-weight:800;font-size:12.5px;margin:6px 8px 22px}
+#sidebar .brand img{width:34px}
+#sidebar .nav-item{display:flex;align-items:center;gap:9px;padding:11px 13px;border-radius:10px;color:#a5a5a5;margin-bottom:3px;font-weight:700;font-size:13px;transition:background .15s,color .15s;position:relative}
+#sidebar .nav-item .ic{width:18px;text-align:center;font-size:14px;opacity:.9}
+#sidebar .nav-item.active{background:linear-gradient(90deg,rgba(254,198,23,.20),rgba(254,198,23,.04));color:var(--gold)}
+#sidebar .nav-item.active::before{content:"";position:absolute;right:0;top:6px;bottom:6px;width:3px;border-radius:99px;background:var(--gold)}
+#sidebar .nav-item:hover:not(.active){background:rgba(255,255,255,.07);color:#fff}
+#sidebar .nav-item.logoutItem{margin-top:26px;color:#e88}
+#main{padding:26px 30px 60px;max-width:1500px}
+.pageTitle{font-size:20px;font-weight:800;margin-bottom:20px;letter-spacing:-.2px}
+
+/* ---- Hero header (مطابق بنر رسمی تاکسیرانی مشهد) ---- */
+.hero{position:relative;overflow:hidden;background:var(--black);color:#fff;padding:24px 26px;margin-bottom:20px;border-radius:var(--r);box-shadow:var(--shadow)}
+.hero::before{content:"";position:absolute;inset:0;background:linear-gradient(100deg,var(--black) 42%,var(--gold) 42%,var(--gold-2) 100%);opacity:.97;z-index:0}
+.hero .heroInner{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.hero .heroBrand{display:flex;align-items:center;gap:12px}
+.hero .heroBrand img{width:46px}
+.hero h2{margin:0 0 4px;font-size:19px;font-weight:800}
+.hero p{margin:0;font-size:12.5px;color:#f3f3f3;opacity:.9}
+
+/* ---- Cards / stats ---- */
+.grid{display:grid;gap:14px}
+.grid.stats{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:20px}
+.statCard{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;text-align:center;box-shadow:var(--shadow-sm);position:relative;overflow:hidden}
+.statCard::after{content:"";position:absolute;top:0;right:0;width:4px;height:100%;background:linear-gradient(var(--gold),var(--gold-2))}
+.statCard .v{font-size:26px;font-weight:800;color:var(--ink);letter-spacing:-.5px}
+.statCard .l{font-size:12px;color:var(--muted);margin-top:6px}
+.statCard.dark{background:linear-gradient(135deg,var(--black-2),var(--black));border-color:var(--black)}
+.statCard.dark .v{color:var(--gold)}
+.statCard.dark .l{color:#bbb}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px;margin-bottom:18px;box-shadow:var(--shadow-sm)}
+.panel h3{margin:0 0 14px;font-size:15px;font-weight:800}
+
+/* ---- table ---- */
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{padding:10px 9px;text-align:right;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:700;font-size:11.5px;background:#f6f8fc}
+th:first-child{border-radius:0 9px 9px 0}
+th:last-child{border-radius:9px 0 0 9px}
+tr:hover td{background:var(--brand-soft)}
+.badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700}
+.badge.done{background:var(--ok-soft);color:var(--ok)}
+.badge.pending{background:var(--warn-soft);color:var(--warn)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.toolbar input,.toolbar select{min-width:130px}
+.spacer{flex:1}
+#map{height:400px;border-radius:var(--r);overflow:hidden;border:1px solid var(--line)}
+
+/* ---- modal ---- */
+.overlay{position:fixed;inset:0;background:rgba(15,29,51,.55);display:flex;align-items:center;justify-content:center;z-index:5000}
+.modal{background:var(--card);border-radius:18px;padding:24px;width:460px;max-width:92vw;max-height:88vh;overflow:auto;box-shadow:var(--shadow);direction:rtl;text-align:right;font-family:"Vazirmatn","Vazir",Tahoma,system-ui,sans-serif}
+.modal h3{margin:0 0 16px;color:var(--brand);font-weight:800}
+.field{margin-bottom:13px}
+.field label{display:block;font-size:12px;color:var(--muted);font-weight:600;margin-bottom:5px}
+.field input,.field select{width:100%}
+.modalActions{display:flex;gap:8px;margin-top:20px;justify-content:flex-end}
+.pagination{display:flex;gap:6px;justify-content:center;margin-top:16px}
+.pagination button{background:#eef2f8;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:6px 11px;font-size:12px;font-weight:600}
+.pagination button.active{background:var(--brand);color:#fff;border-color:var(--brand)}
+.toast{position:fixed;bottom:22px;left:22px;background:var(--card);border-right:4px solid var(--brand);color:var(--ink);padding:13px 18px;border-radius:12px;z-index:99;box-shadow:var(--shadow);font-size:13px}
+.usersList{border-top:1px solid var(--line);margin-top:16px;padding-top:16px}
+.userRow{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+
+/* ---- Public landing map ---- */
+#publicView{min-height:100vh;background:linear-gradient(180deg,#fffaf0,#f6f7f9);padding:18px}
+.publicTop{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.publicBrand{display:flex;align-items:center;gap:10px;font-weight:900;color:var(--black)}
+.publicBrand img{width:42px}
+.publicLogin{position:fixed;top:14px;left:14px;z-index:20}
+.publicHero{background:linear-gradient(110deg,var(--black) 0%,var(--black-2) 48%,var(--gold) 48%,var(--gold-2) 100%);color:#fff;border-radius:22px;padding:24px;box-shadow:var(--shadow);margin-bottom:16px}
+.publicHero h1{margin:0 0 6px;font-size:22px}
+.publicHero p{margin:0;color:#f4f4f4;font-size:13px}
+.publicFilters{display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:8px;margin-bottom:14px}
+.publicLayout{display:grid;grid-template-columns:360px 1fr;gap:16px}
+.publicResults{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;max-height:560px;overflow:auto}
+.publicSchool{border-bottom:1px solid var(--line);padding:10px 0;cursor:pointer}
+.publicSchool:last-child{border-bottom:none}
+.publicSchool b{display:block;font-size:13.5px}
+.publicSchool span{display:block;color:var(--muted);font-size:12px;margin-top:3px}
+#publicMap{height:560px;border-radius:var(--r);border:1px solid var(--line);overflow:hidden;background:#e9edf3}
+.leaflet-popup-content{direction:rtl;text-align:right;font-family:"Vazirmatn","Vazir",Tahoma,system-ui,sans-serif !important;line-height:1.9;font-size:13px;min-width:210px}
+.leaflet-popup-content-wrapper{border-radius:14px}
+.publicCalculator{margin-top:16px;background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:16px;box-shadow:var(--shadow-sm)}
+.publicCalculator h3{margin:0 0 12px;font-size:15px;font-weight:900}
+.calcGrid{display:grid;grid-template-columns:1.4fr 1fr auto auto;gap:8px;align-items:end}
+.calcResult{margin-top:12px;background:var(--gold-soft);border:1px solid rgba(224,171,0,.35);border-radius:12px;padding:12px;font-weight:800;color:var(--gold-ink);display:none}
+.calcHint{font-size:12px;color:var(--muted);line-height:1.9;margin-top:8px}
+#homeMap{height:280px;border-radius:14px;border:1px solid var(--line);overflow:hidden;margin-top:12px;background:#e9edf3}
+@media(max-width:900px){.calcGrid{grid-template-columns:1fr}}
+@media(max-width:900px){.publicFilters{grid-template-columns:1fr}.publicLayout{grid-template-columns:1fr}#publicMap{height:420px}}
+
+.siteVisitsKpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:14px 0}.siteVisitKpi{background:linear-gradient(145deg,#fff,#f8fbff);border:1px solid var(--line);border-radius:16px;padding:15px}.siteVisitKpi .v{font-size:25px;font-weight:900;color:#17324d}.siteVisitKpi .l{font-size:11.5px;color:var(--muted);margin-top:4px}.siteVisitToolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:end}.siteVisitToolbar .field{margin:0;min-width:150px}.siteVisitChart{height:260px;display:flex;align-items:end;gap:5px;padding:18px 8px 8px;border:1px solid var(--line);border-radius:16px;background:#fbfdff;overflow-x:auto}.siteVisitBar{min-width:24px;flex:1;max-width:54px;display:flex;flex-direction:column;align-items:center;justify-content:end;height:100%;gap:5px}.siteVisitBar i{display:block;width:100%;border-radius:7px 7px 2px 2px;background:linear-gradient(180deg,var(--gold),#d99b00);min-height:3px}.siteVisitBar span{font-size:9px;color:var(--muted);white-space:nowrap;transform:rotate(-35deg);transform-origin:center}.siteVisitLegend{font-size:11px;color:var(--muted);margin-top:7px}@media(max-width:900px){.siteVisitsKpis{grid-template-columns:repeat(2,1fr)}}@media(max-width:600px){.siteVisitsKpis{grid-template-columns:1fr}.siteVisitToolbar .field{min-width:100%;width:100%}}
+
+/* ==================== طراحی حرفه‌ای تنظیمات ==================== */
+.settingsHero{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:22px 24px;margin:0 0 18px;border:1px solid var(--line);border-radius:22px;background:linear-gradient(135deg,#ffffff,#f4f8fc);box-shadow:0 14px 38px rgba(19,48,77,.08)}
+.settingsHero h1{margin:0 0 6px;font-size:22px;color:#16324a}.settingsHero p{margin:0;color:var(--muted);font-size:12.5px;line-height:1.9}.settingsHeroBadge{display:flex;align-items:center;gap:10px;padding:11px 15px;border-radius:15px;background:#fff;border:1px solid #e4eaf1;white-space:nowrap;font-weight:800;color:#183a56}.settingsHeroBadge i{font-style:normal;font-size:23px}.settingsQuickLinks{display:none}.settingsQuickLink{display:flex;align-items:center;gap:12px;padding:15px 17px;border:1px solid var(--line);border-radius:17px;background:#fff;cursor:pointer;transition:.18s;box-shadow:0 8px 24px rgba(19,48,77,.05)}.settingsQuickLink:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(19,48,77,.09)}.settingsQuickLink .qicon{width:42px;height:42px;display:grid;place-items:center;border-radius:13px;background:#eef4fa;font-size:20px}.settingsQuickLink b{display:block;font-size:13px}.settingsQuickLink span{display:block;margin-top:3px;color:var(--muted);font-size:11px}.legacySettingsWrap{display:grid;grid-template-columns:235px minmax(0,1fr);gap:18px;align-items:start}.legacySettingsNav{position:sticky;top:14px;display:flex;flex-direction:column;gap:7px;padding:10px;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 10px 28px rgba(19,48,77,.07)}.legacySettingsNav button{width:100%;text-align:right}.legacySettingsPane{min-width:0}.legacySettingsSection{display:none}.legacySettingsSection.active{display:block}@media(max-width:850px){.legacySettingsWrap{grid-template-columns:1fr}.legacySettingsNav{position:static;display:grid;grid-template-columns:repeat(2,1fr)}.legacySettingsNav button{width:auto;text-align:center}}@media(max-width:520px){.legacySettingsNav{grid-template-columns:1fr}.legacySettingsNav button{text-align:right}}
+.settingsPage .panel[style*="max-width"]{max-width:none!important;width:100%;box-sizing:border-box}.settingsPage>.panel{border-radius:20px;box-shadow:0 10px 30px rgba(19,48,77,.06)}.settingsPage>.panel h3{font-size:15px;color:#183a56}.settingsPage>.panel .calcHint{border-radius:12px}.settingsPage .settingsTabs{margin-bottom:18px}.settingsPage .settingsTabs .btn{min-height:40px}.settingsPage .field label{font-weight:700;color:#29445e}.settingsPage .field input,.settingsPage .field select,.settingsPage .field textarea{border-radius:12px}.settingsPage .settingsSectionHead{background:#f8fafc;border-radius:14px;padding:10px 13px}.settingsPage .settingsSectionHead h2{font-size:15px}.settingsPage .settingsCard{box-shadow:0 10px 28px rgba(19,48,77,.055)}
+@media(max-width:900px){.settingsHero{align-items:flex-start;flex-direction:column}.settingsHeroBadge{width:100%;box-sizing:border-box;justify-content:center}}
+@media(max-width:600px){.settingsHero{padding:18px}.settingsHero h1{font-size:19px}}
+
+.settingsPage{background:transparent}.settingsPage .settingsHero{position:relative}.settingsPage .settingsWrap{margin-top:2px}.settingsNav button{font-family:inherit;font-weight:800}.settingsCardsGrid>.panel{min-height:0}.settingsCardHead{border-bottom:1px solid #edf1f6;padding-bottom:12px}.settingsSectionHead{background:linear-gradient(135deg,#f8fafc,#fff);border:1px solid var(--line);padding:12px 15px;border-radius:16px}.settingsNav button:not(.secondary){box-shadow:0 8px 18px rgba(23,54,83,.16)}.settingsPage{padding-bottom:30px}.settingsPage>.settingsTabs,.settingsPage>.settingsQuickLinks,.settingsPage>.pageTitle,.settingsPage>.settingsHero{grid-column:1/-1}.settingsPage>.panel{max-width:none!important}.settingsPage{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.settingsPage>.settingsHero,.settingsPage>.pageTitle,.settingsPage>.settingsTabs,.settingsPage>.settingsQuickLinks{width:auto}.settingsPage>.panel{margin:0!important}.settingsPage>.panel h3{color:#183a56;margin-top:0}.settingsPage>.panel{border-radius:20px;box-shadow:0 10px 28px rgba(19,48,77,.06)}@media(max-width:900px){.settingsPage{grid-template-columns:1fr}}
+
+/* ====== نوار ابزار و هدر حرفه‌ای صفحات ادمین ====== */
+.adminPageHeader{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin:0 0 16px;padding:20px 22px;border:1px solid #dce5ef;border-radius:22px;background:linear-gradient(135deg,#ffffff 0%,#f5f8fc 72%,#fff8df 100%);box-shadow:0 14px 36px rgba(16,42,67,.08)}
+.adminPageHeader .adminPageTitle{margin:0;font-size:22px;font-weight:950;color:#173653;display:flex;align-items:center;gap:10px}.adminPageHeader .adminPageTitle:before{content:'';width:6px;height:30px;border-radius:99px;background:linear-gradient(#f7b500,#d99600)}
+.adminPageHeader p{margin:6px 0 0;color:#687386;font-size:12px;line-height:1.8}.adminPageHeader .adminPageStats{display:flex;gap:8px;flex-wrap:wrap}.adminPageHeader .miniStat{min-width:92px;padding:9px 12px;border-radius:13px;background:#fff;border:1px solid #e1e8f0;text-align:center}.adminPageHeader .miniStat b{display:block;color:#173653;font-size:16px}.adminPageHeader .miniStat span{display:block;color:#758196;font-size:10px;margin-top:2px}
+.adminPageToolbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:12px;margin-bottom:14px;background:#fff;border:1px solid #dfe7f0;border-radius:18px;box-shadow:0 9px 24px rgba(16,42,67,.055)}
+.adminPageToolbar .toolbarGroup{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.adminPageToolbar .toolbarDivider{width:1px;height:32px;background:#e2e8f0;margin:0 2px}.adminPageToolbar input,.adminPageToolbar select{min-height:44px;background:#f8fafc}.adminPageToolbar .spacer{flex:1}.adminPageToolbar .btn{white-space:nowrap}.adminPageToolbar .primaryAction{background:linear-gradient(135deg,#173653,#274e70);color:#fff;border-color:#173653}.adminPageToolbar .exportAction{background:#fff8df;color:#775800;border-color:#f0d77d}.adminPageToolbar .filterAction{background:#f4f7fa;color:#29445e;border-color:#dfe6ef}
+.adminDataPanel{padding:12px 14px 18px!important;overflow:hidden}.adminDataPanel .tableWrap{overflow:auto}.adminDataPanel table{min-width:850px}.adminDataPanel:before{content:'فهرست اطلاعات';display:block;font-weight:900;color:#173653;font-size:13px;padding:4px 5px 12px}
+@media(max-width:800px){.adminPageHeader{align-items:flex-start;flex-direction:column}.adminPageHeader .adminPageStats{width:100%}.adminPageHeader .miniStat{flex:1}.adminPageToolbar{padding:10px}.adminPageToolbar .toolbarDivider{display:none}.adminPageToolbar .toolbarGroup{width:100%}.adminPageToolbar .toolbarGroup>*{flex:1;min-width:0}.adminPageToolbar .spacer{display:none}.adminDataPanel table{min-width:700px}}
+
+
+/* نوار ابزار عمومی جدید برای تمام صفحات مدیریت */
+#main>.toolbar{padding:12px;background:#fff;border:1px solid #dfe7f0;border-radius:18px;box-shadow:0 9px 24px rgba(16,42,67,.055);margin-bottom:16px}
+#main>.toolbar input,#main>.toolbar select{background:#f8fafc;border-color:#dce4ef}
+#main>.toolbar .btn{white-space:nowrap}
+
+
+.dashboardHero{position:relative;overflow:hidden;padding:26px 28px;border-radius:24px;background:linear-gradient(135deg,#101820,#203d55 58%,#315a76);color:#fff;box-shadow:0 18px 42px rgba(16,35,52,.18);margin-bottom:18px}.dashboardHero:after{content:"";position:absolute;width:260px;height:260px;border-radius:50%;left:-100px;bottom:-160px;background:rgba(254,198,23,.13)}.dashboardHeroTop{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}.dashboardHero h1{margin:0 0 5px;font-size:23px}.dashboardHero p{margin:0;color:rgba(255,255,255,.76);font-size:12.5px}.dashboardHeroActions{display:flex;gap:8px;flex-wrap:wrap}.dashboardHeroActions .btn{box-shadow:none}.dashboardHeroActions .gold{background:var(--gold);color:#17120a}.dashboardHeroActions .light{background:rgba(255,255,255,.10);color:#fff;border:1px solid rgba(255,255,255,.18)}.dashboardMeta{display:flex;gap:8px;margin-top:17px;position:relative;z-index:1;flex-wrap:wrap}.dashboardMeta span{padding:6px 10px;border-radius:10px;background:rgba(255,255,255,.08);font-size:11px;color:rgba(255,255,255,.82)}.dashboardSectionTitle{display:flex;align-items:end;justify-content:space-between;gap:10px;margin:22px 0 10px}.dashboardSectionTitle h3{margin:0;font-size:15px}.dashboardSectionTitle span{font-size:11px;color:var(--muted)}.dashboardStats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}.dashboardStat{position:relative;overflow:hidden;background:#fff;border:1px solid #e4e9ef;border-radius:18px;padding:17px 18px;box-shadow:0 9px 26px rgba(16,42,67,.055);min-height:112px}.dashboardStat .ico{width:38px;height:38px;display:grid;place-items:center;border-radius:12px;background:#fff8df;font-size:19px;margin-bottom:10px}.dashboardStat .v{font-size:23px;font-weight:950;color:#173653}.dashboardStat .l{font-size:11.5px;color:var(--muted);margin-top:4px}.dashboardGrid2{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,.75fr);gap:16px}.dashboardPanel{background:#fff;border:1px solid #e4e9ef;border-radius:20px;padding:17px;box-shadow:0 9px 26px rgba(16,42,67,.055)}.dashboardPanel h3{margin:0 0 14px;font-size:14px}.dashboardProgress{display:flex;align-items:center;gap:14px}.dashboardProgressBar{height:13px;background:#eef2f5;border-radius:99px;overflow:hidden;flex:1}.dashboardProgressBar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold-2),var(--gold));border-radius:99px}.dashboardProgressPct{font-weight:950;font-size:18px;color:#173653;min-width:48px;text-align:center}.dashboardQuick{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.dashboardQuick button{min-height:54px;text-align:right;border:1px solid #e1e8ef;background:#f8fafc;border-radius:13px;padding:9px 12px;font-family:inherit;font-weight:800;color:#25445e}.dashboardQuick small{display:block;font-weight:500;color:var(--muted);font-size:10px;margin-top:2px}.dashboardMapPanel{margin-top:16px}@media(max-width:1100px){.dashboardStats{grid-template-columns:repeat(2,minmax(0,1fr))}.dashboardGrid2{grid-template-columns:1fr}}@media(max-width:560px){.dashboardStats{grid-template-columns:1fr}.dashboardQuick{grid-template-columns:1fr}.dashboardHero{padding:20px}}
+
+/* ===== پوسته یکپارچه و حرفه‌ای صفحات ادمین ===== */
+.adminModernPage{min-height:100%;padding-bottom:28px}.adminModernPage .pageTitle{display:none}.adminModernHero{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:22px 24px;margin-bottom:15px;border:1px solid #dce5ef;border-radius:23px;background:linear-gradient(135deg,#101820 0%,#203d55 62%,#315a76 100%);color:#fff;box-shadow:0 16px 38px rgba(16,35,52,.14)}.adminModernHero:after{content:'';position:absolute;width:220px;height:220px;border-radius:50%;left:-85px;bottom:-145px;background:rgba(254,198,23,.11)}.adminModernHeroMain{position:relative;z-index:1}.adminModernHero h1{margin:0 0 5px;font-size:21px;font-weight:950}.adminModernHero p{margin:0;color:rgba(255,255,255,.75);font-size:12px;line-height:1.9}.adminModernHeroIcon{position:relative;z-index:1;width:54px;height:54px;display:grid;place-items:center;border-radius:17px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.14);font-size:27px}.adminModernActions{position:relative;z-index:1;display:flex;gap:8px;flex-wrap:wrap}.adminModernActions .btn{box-shadow:none}.adminModernActions .btn:first-child{background:var(--gold);color:#17120a;border-color:var(--gold)}.adminModernActions .btn.light{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.18)}.adminModernKpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:15px}.adminModernKpi{background:#fff;border:1px solid #e3e9f0;border-radius:17px;padding:13px 15px;box-shadow:0 8px 23px rgba(16,42,67,.045)}.adminModernPage>.panel{border-radius:19px;border-color:#e1e8ef;box-shadow:0 9px 27px rgba(16,42,67,.05)}.adminModernPage table thead th{background:#f4f7fa;color:#29445e;font-weight:900;white-space:nowrap}.adminModernPage table tbody tr:hover{background:#fffaf0}.adminModernPage>.toolbar{padding:12px;border:1px solid #dfe7f0;border-radius:17px;background:#fff;box-shadow:0 8px 23px rgba(16,42,67,.045);margin-bottom:14px}.adminModernPage .reservationMapBox,.adminModernPage .coverageMapBox{border-radius:16px;overflow:hidden}@media(max-width:900px){.adminModernKpis{grid-template-columns:repeat(2,minmax(0,1fr))}.adminModernHero{align-items:flex-start;flex-direction:column}}@media(max-width:560px){.adminModernKpis{grid-template-columns:1fr}.adminModernHero{padding:19px}.adminModernHero h1{font-size:18px}.adminModernActions{width:100%}.adminModernActions .btn{flex:1}}
+</style>
+</head>
+<body>
+
+<div id="publicView">
+  <button class="btn dark sm publicLogin" onclick="showLogin()">ورود به سایت</button>
+  <div class="publicTop"><div class="publicBrand"><img src="assets/icon-mark.png" alt="لوگو"><div>سامانه سرویس مدارس مشهد</div></div></div>
+  <div class="publicHero"><h1>جستجوی عمومی مدارس و شرکت سرویس‌دهنده</h1><p>نام مدرسه را جستجو کنید یا بر اساس ناحیه، مقطع و جنسیت دانش‌آموزان فیلتر کنید. با انتخاب آیکون مدرسه، اطلاعات مدرسه و شرکت نمایش داده می‌شود.</p></div>
+  <div class="panel">
+    <div class="publicFilters">
+      <input id="pubQ" placeholder="جستجوی نام مدرسه یا کد مدرسه">
+      <select id="pubDistrict"><option value="">همه نواحی</option></select>
+      <select id="pubLevel"><option value="">همه مقاطع</option></select>
+      <select id="pubGender"><option value="">همه جنسیت‌ها</option><option>پسرانه</option><option>دخترانه</option><option>مختلط</option></select>
+      <button class="btn" onclick="loadPublicSchools()">جستجو</button>
+    </div>
+    <div class="publicLayout"><div class="publicResults" id="publicResults">برای نمایش مدارس، نام مدرسه را در کادر جستجو وارد کنید.</div><div id="publicMap"></div></div>
+    <div class="publicCalculator">
+      <h3>محاسبه هزینه سرویس مدارس</h3>
+      <div class="calcGrid">
+        <div class="field"><label>مدرسه</label><select id="calcSchool"><option value="">ابتدا مدرسه را انتخاب کنید</option></select></div>
+        <div class="field"><label>کلاس خودرو</label><select id="calcVehicleClass"><option value="">انتخاب کلاس خودرو</option></select></div>
+        <button class="btn secondary" onclick="locateHomeForCalc()">دریافت مکان منزل</button>
+        <button class="btn" onclick="calculateServiceCost()">محاسبه هزینه</button>
+      </div>
+      <div class="calcHint">مکان منزل را می‌توانید با دکمه GPS ثبت کنید یا مستقیماً روی نقشه کلیک کنید. مسیر و فاصله با وب‌سرویس مسیریابی نشان محاسبه می‌شود.</div>
+      <div id="homeMap"></div>
+      <div id="calcResult" class="calcResult"></div>
+    </div>
+  </div>
+</div>
+
+<div id="loginView" class="hidden">
+  <div class="loginBox">
+    <div class="brandRow"><img src="assets/logo.png" alt="تاکسیرانی مشهد"></div>
+    <h1>سامانهٔ مدیریت شرکت‌های سرویس مدارس مشهد</h1>
+    <p>ورود مدیر سامانه</p>
+    <label>نام کاربری</label><input id="loginUser" autocomplete="username">
+    <label>رمز عبور</label><input id="loginPass" type="password" autocomplete="current-password">
+    <button class="btn" onclick="doLogin()">ورود</button>
+    <div class="err hidden" id="loginErr"></div>
+  </div>
+</div>
+
+<div id="appView" class="hidden">
+  <div id="sidebar">
+    <div class="brand"><img src="assets/icon-mark.png" alt="لوگو"> سرویس مدارس<br>تاکسیرانی مشهد</div>
+    <a class="nav-item" data-tab="dashboard" onclick="goTab('dashboard')"><span class="ic">📊</span> داشبورد</a>
+    <a class="nav-item hidden" id="navSiteVisits" data-tab="siteVisits" onclick="goTab('siteVisits')"><span class="ic">📈</span> آمار بازدید سایت</a>
+    <a class="nav-item" data-tab="districts" onclick="goTab('districts')"><span class="ic">🗂️</span> نواحی آموزش و پرورش</a>
+    <a class="nav-item" data-tab="companies" onclick="goTab('companies')"><span class="ic">🏢</span> شرکت‌ها</a>
+    <a class="nav-item" data-tab="schools" onclick="goTab('schools')"><span class="ic">🏫</span> مدارس</a>
+    <a class="nav-item" data-tab="reports" onclick="goTab('reports')"><span class="ic">📈</span> گزارش‌ها</a>
+    <a class="nav-item" data-tab="settings" onclick="goTab('settings')"><span class="ic">⚙️</span> تنظیمات سامانه</a>
+    <a class="nav-item" data-tab="schoolFields" onclick="goTab('schoolFields')"><span class="ic">🧩</span> آیتم‌های مشخصات مدرسه</a>
+    <a class="nav-item hidden" id="navAdminUsers" data-tab="adminUsers" onclick="goTab('adminUsers')"><span class="ic">🔐</span> کاربران و دسترسی‌ها</a>
+    <a class="nav-item logoutItem" onclick="logout()"><span class="ic">⏻</span> خروج</a>
+  </div>
+  <div id="main"></div>
+</div>
+
+<div id="modalRoot"></div>
+<div id="toastRoot"></div>
+
+<script>
+/* ==================== حالت کلی و API ==================== */
+const API = location.origin + '/api';
+let TOKEN = localStorage.getItem('admin_token') || null;
+let ME = null;
+let CACHE = { districts: [], companies: [] };
+
+async function api(path, opts = {}) {
+  const headers = opts.headers || {};
+  if (!(opts.body instanceof FormData)) headers['content-type'] = 'application/json';
+  if (TOKEN) headers['Authorization'] = 'Bearer ' + TOKEN;
+  const res = await fetch(API + path, { ...opts, headers, body: opts.body instanceof FormData ? opts.body : (opts.body ? JSON.stringify(opts.body) : undefined) });
+  if (res.status === 204) return null;
+  let data = null;
+  try { data = await res.json(); } catch (e) {}
+  if (!res.ok) throw new Error((data && data.error) || ('خطا ' + res.status));
+  return data;
+}
+function toast(msg, isErr) {
+  const el = document.createElement('div'); el.className = 'toast'; el.style.borderRightColor = isErr ? 'var(--danger)' : 'var(--brand)';
+  el.textContent = msg; document.getElementById('toastRoot').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+async function publicApi(path) {
+  const res = await fetch(API + path);
+  let data = null; try { data = await res.json(); } catch(e) {}
+  if (!res.ok) throw new Error((data && data.error) || ('خطا ' + res.status));
+  return data;
+}
+function showPublic(){
+  document.getElementById('publicView').classList.remove('hidden');
+  document.getElementById('loginView').classList.add('hidden');
+  document.getElementById('appView').classList.add('hidden');
+}
+function showLogin(){
+  document.getElementById('publicView').classList.add('hidden');
+  document.getElementById('loginView').classList.remove('hidden');
+  document.getElementById('appView').classList.add('hidden');
+}
+let PUBLIC_MAP=null, PUBLIC_MARKERS=[], PUBLIC_SCHOOLS=[], HOME_MAP=null, HOME_MARKER=null, ROUTE_LINE=null, HOME_POINT=null, CALC_PRICING=null;
+async function bootPublic(){
+  showPublic();
+  try {
+    CACHE.mapConfig = await publicApi('/map-config');
+    const [districts, levels, pricing] = await Promise.all([publicApi('/districts'), publicApi('/education-levels'), publicApi('/public/service-pricing')]);
+    CALC_PRICING = pricing;
+    document.getElementById('pubDistrict').innerHTML = '<option value="">همه نواحی</option>' + districts.map(d=>`<option value="${d.id}">${esc(d.title)}</option>`).join('');
+    document.getElementById('pubLevel').innerHTML = '<option value="">همه مقاطع</option>' + levels.map(l=>`<option value="${esc(l.title)}">${esc(l.title)}</option>`).join('');
+    document.getElementById('calcVehicleClass').innerHTML = '<option value="">انتخاب کلاس خودرو</option>' + (pricing.vehicle_classes||[]).map(v=>`<option value="${esc(v.key)}">${esc(v.title)}</option>`).join('');
+    ['pubQ','pubDistrict','pubLevel','pubGender'].forEach(id=>document.getElementById(id).addEventListener('change', loadPublicSchools));
+    document.getElementById('pubQ').addEventListener('keyup', (e)=>{ if(e.key==='Enter') loadPublicSchools(); });
+    PUBLIC_SCHOOLS=[];
+    document.getElementById('publicResults').textContent='برای نمایش مدارس، نام مدرسه را در کادر جستجو وارد کنید.';
+    document.getElementById('calcSchool').innerHTML='<option value="">ابتدا مدرسه را از جستجو انتخاب کنید</option>';
+    initHomeMap();
+  } catch(e) { document.getElementById('publicResults').textContent = e.message; }
+}
+async function loadPublicSchools(){
+  const q=document.getElementById('pubQ').value.trim();
+  if(!q){
+    PUBLIC_SCHOOLS=[];
+    document.getElementById('publicResults').textContent='برای نمایش مدارس، نام مدرسه را در کادر جستجو وارد کنید.';
+    document.getElementById('calcSchool').innerHTML='<option value="">ابتدا مدرسه را از جستجو انتخاب کنید</option>';
+    if(PUBLIC_MAP&&PUBLIC_MAP.raw){try{PUBLIC_MAP.raw.remove();}catch(e){} PUBLIC_MAP=null;}
+    return;
+  }
+  const qs=new URLSearchParams(); const d=document.getElementById('pubDistrict').value,l=document.getElementById('pubLevel').value,g=document.getElementById('pubGender').value;
+  qs.set('q',q);if(d)qs.set('district_id',d);if(l)qs.set('level',l);if(g)qs.set('gender',g);
+  try{
+    const rows=await publicApi('/public/schools/map?'+qs.toString()); PUBLIC_SCHOOLS=rows;
+    document.getElementById('calcSchool').innerHTML='<option value="">انتخاب مدرسه</option>'+rows.map(s=>`<option value="${s.id}">${esc(s.name)} - ${esc(s.district_title||'بدون ناحیه')}</option>`).join('');
+    document.getElementById('publicResults').innerHTML=rows.map(s=>`<div class="publicSchool" onclick="focusPublicSchool(${s.id})"><b>${esc(s.name)}</b><span>${esc(s.district_title||'بدون ناحیه')} · ${esc(s.level||'—')} · ${esc(s.gender||'—')}</span><span>شرکت: ${esc(s.company_title||'—')}</span></div>`).join('')||'مدرسه‌ای با این جستجو و فیلترها یافت نشد.';
+    if(PUBLIC_MAP&&PUBLIC_MAP.raw){try{PUBLIC_MAP.raw.remove();}catch(e){}};
+    PUBLIC_MAP=createMap('publicMap',{lat:rows[0]?.lat||36.297,lng:rows[0]?.lng||59.606,zoom:rows.length?13:12}); PUBLIC_MARKERS=[];
+    const companySeen=new Set();
+    rows.forEach(s=>{
+      const popup=`<div class="schoolPopup"><b>${esc(s.name)}</b><br>مقطع: ${esc(s.level||'—')}<br>تعداد دانش‌آموزان: ${esc(s.student_count??'—')}<br>تعداد رانندگان: ${esc(s.driver_count??'—')}<br>شرکت سرویس‌دهنده: ${esc(s.company_title||'—')}<br>آدرس مدرسه: ${esc(s.address||'—')}<br><button class="btn sm" onclick="showCompanyInfo(${s.company_id})">اطلاعات بیشتر</button></div>`;
+      if(s.lat&&s.lng){const m=PUBLIC_MAP.addMarker(s.lat,s.lng,popup,'#0e8a6a');m.__schoolId=s.id;m.__school=s;PUBLIC_MARKERS.push(m);}
+      if(s.company_id&&s.company_lat&&s.company_lng&&!companySeen.has(String(s.company_id))){
+        companySeen.add(String(s.company_id));
+        PUBLIC_MAP.addMarker(s.company_lat,s.company_lng,`<div dir="rtl" style="text-align:right;font-family:Vazirmatn,Vazir,Tahoma"><b>${esc(s.company_title||'شرکت سرویس‌دهنده')}</b><br>موقعیت شرکت سرویس‌دهنده مدرسه<br>${esc(s.company_address||'')}</div>`, '#f6c324');
+      }
+    });
+    if(rows.length===1) focusPublicSchool(rows[0].id);
+  }catch(e){document.getElementById('publicResults').textContent=e.message;toast(e.message,true);}
+}
+function focusPublicSchool(id){ const m = PUBLIC_MARKERS.find(x=>x.__schoolId===id); if(m){ PUBLIC_MAP.raw.setView(m.getLatLng(), 16); m.openPopup(); } }
+async function showCompanyInfo(id){
+  if(!id) return;
+  try{
+    const c = await publicApi('/public/company/' + id);
+    showModal(`<h3>${esc(c.title)}</h3><div class="companyInfoModal" style="font-size:13px;line-height:2.1;direction:rtl;text-align:right;font-family:Vazirmatn,Vazir,Tahoma"><div>مدیرعامل: ${esc(c.manager_name||'—')}</div><div>موبایل مدیرعامل: ${esc(c.ceo_mobile||'—')}</div><div>تلفن ثابت: ${esc(c.phone||'—')}</div><div>آدرس: ${esc(c.address||'—')}</div></div><div class="modalActions"><button class="btn secondary" onclick="closeModal()">بستن</button>${c.lat && c.lng ? `<button class="btn" onclick="closeModal();showCompanyOnPublicMap(${c.lat},${c.lng},'${esc(c.title).replace(/'/g,"\\'")}')">نمایش شرکت روی نقشه</button>` : ''}</div>`);
+  }catch(e){ toast(e.message,true); }
+}
+function showCompanyOnPublicMap(lat,lng,title){ PUBLIC_MAP.raw.setView([lat,lng],16); PUBLIC_MAP.addMarker(lat,lng, `<b>${esc(title)}</b>`, '#fec617').openPopup?.(); }
+
+
+function initHomeMap(){
+  if (!document.getElementById('homeMap')) return;
+  if (HOME_MAP && HOME_MAP.raw) { try { HOME_MAP.raw.remove(); } catch(e){} }
+  HOME_MAP = createMap('homeMap', { lat: 36.297, lng: 59.606, zoom: 12 });
+  HOME_MAP.raw.on('click', (ev)=> setHomePoint(ev.latlng.lat, ev.latlng.lng));
+}
+function setHomePoint(lat,lng){
+  HOME_POINT = { lat: Number(lat), lng: Number(lng) };
+  if (HOME_MARKER) { try { HOME_MAP.raw.removeLayer(HOME_MARKER); } catch(e){} }
+  HOME_MARKER = HOME_MAP.addMarker(HOME_POINT.lat, HOME_POINT.lng, '<b>مکان منزل</b>', '#d23a3a');
+  HOME_MAP.raw.setView([HOME_POINT.lat, HOME_POINT.lng], 16);
+}
+function locateHomeForCalc(){
+  if (!navigator.geolocation) return toast('GPS در مرورگر شما در دسترس نیست.', true);
+  navigator.geolocation.getCurrentPosition(
+    pos => setHomePoint(pos.coords.latitude, pos.coords.longitude),
+    err => toast('دریافت موقعیت ناموفق بود. می‌توانید روی نقشه کلیک کنید.', true),
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+  );
+}
+async function calculateQuickServiceCost(){
+  if(!publicFeatureEnabled('public_cost_calculator_quick')) {
+    return toast('محاسبه سریع هزینه توسط مدیر سامانه غیرفعال شده است.', true);
+  }
+
+  const vehicleClass = document.getElementById('quickCalcVehicleClass').value;
+  const districtId = document.getElementById('quickCalcDistrict').value;
+  const km = Number(document.getElementById('quickCalcKm').value || 0);
+  const resultEl = document.getElementById('quickCalcResult');
+
+  if(!vehicleClass) {
+    return toast('کلاس خودرو را انتخاب کنید.', true);
+  }
+
+  if(!districtId) {
+    return toast('ناحیهٔ آموزش و پرورش را انتخاب کنید.', true);
+  }
+
+  if(!km || km <= 0) {
+    return toast('مسافت را به کیلومتر وارد کنید.', true);
+  }
+
+  resultEl.style.display = 'block';
+  resultEl.textContent = 'در حال محاسبه...';
+
+  try{
+    const qs = new URLSearchParams({
+      vehicle_class: vehicleClass,
+      km: String(km),
+      district_id: districtId
+    });
+
+    const r = await publicApi('/public/service-cost-quick?' + qs.toString());
+
+    const monthlyAmount = Number(r.cost || 0);
+    const nineMonthAmount = monthlyAmount * 9;
+
+    const unit = r.pricing_mode === 'excel' ? 'ریال' : 'تومان';
+
+    const lines = [
+      `<div class="quick-cost-info">`,
+      `<div>کلاس خودرو: ${esc(r.vehicle_title)}</div>`,
+      `<div>مسافت: ${Number(r.distance_km).toLocaleString('fa-IR')} کیلومتر</div>`
+    ];
+
+    if(r.pricing_mode === 'excel'){
+      // ضریب ترافیک در محاسبه اعمال می‌شود و فقط از خروجی کاربر حذف شده است.
+    } else {
+      lines.push(
+        `<div>نرخ هر کیلومتر: ${Number(r.rate_per_km).toLocaleString('fa-IR')} ${unit}</div>`
+      );
+    }
+
+    lines.push(`
+<div class="quick-cost-monthly">
+  <div class="quick-cost-label">هزینه ماهیانه سرویس:</div>
+  <div class="quick-cost-monthly-value">
+    ${monthlyAmount.toLocaleString('fa-IR')} ${unit}
+  </div>
+</div>
+      <div class="quick-cost-nine-month">
+        <div class="quick-cost-nine-month-label">
+          هزینه ۹ ماهه سرویس حمل و نقل دانش‌آموزی
+        </div>
+        <div class="quick-cost-nine-month-value">
+          ${nineMonthAmount.toLocaleString('fa-IR')} ${unit}
+        </div>
+      </div>
+
+      </div>
+    `);
+
+    resultEl.innerHTML = lines.join('');
+
+  }catch(e){
+    resultEl.textContent = '';
+    resultEl.style.display = 'none';
+    toast(e.message, true);
+  }
+}
+
+/* ==================== ورود ==================== */
+async function doLogin() {
+  const username = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value;
+  const errEl = document.getElementById('loginErr'); errEl.classList.add('hidden');
+  try {
+    const r = await api('/admin/login', { method: 'POST', body: { username, password } });
+    TOKEN = r.token; ME = r.user; localStorage.setItem('admin_token', TOKEN);
+    boot();
+  } catch (e) { errEl.textContent = e.message; errEl.classList.remove('hidden'); }
+}
+function logout() { TOKEN = null; localStorage.removeItem('admin_token'); location.reload(); }
+
+async function boot() {
+  if (!TOKEN) { await bootPublic(); return; }
+  try {
+    ME = await api('/admin/me');
+  } catch (e) { logout(); return; }
+  document.getElementById('publicView').classList.add('hidden');
+  document.getElementById('loginView').classList.add('hidden');
+  document.getElementById('appView').classList.remove('hidden');
+  if (ME.role === 'super_admin') { document.getElementById('navAdminUsers').classList.remove('hidden'); document.getElementById('navSiteVisits').classList.remove('hidden'); }
+  await refreshLookups();
+  goTab('dashboard');
+}
+async function refreshLookups() {
+  try {
+    CACHE.districts = await api('/admin/districts');
+    CACHE.companies = await api('/admin/companies');
+    CACHE.mapConfig = await api('/map-config');
+    CACHE.levels = await api('/education-levels');
+    CACHE.appConfig = await api('/app-config');
+    CACHE.schoolFieldDefs = await api('/school-field-defs');
+  } catch (e) {}
+}
+// لایهٔ کاشی نقشه را بر اساس تنظیمات سامانه (OSM / نشان / گوگل) برمی‌گرداند
+// ایجاد نقشه به‌صورت مستقل از ارائه‌دهنده — بر اساس تنظیمات سامانه یکی از این دو موتور را می‌سازد:
+// ۱) Leaflet با کاشی OSM/گوگل   ۲) کیت رسمی نقشهٔ نشان (بر پایهٔ MapboxGL، طبق مستندات platform.neshan.org)
+// خروجی یک شیء یکسان برمی‌گرداند: { addMarker(lat,lng,popupHtml,color) }
+function createMap(containerId, { lat = 36.297, lng = 59.606, zoom = 12 } = {}) {
+  const cfg = CACHE.mapConfig || { provider: 'osm' };
+  let map;
+  if (cfg.provider === 'neshan' && cfg.neshan_map_key) {
+    // کیت رسمی نقشهٔ نشان مستقیماً روی Leaflet ساخته شده (همان L.Map با چند گزینهٔ اضافه)
+    map = new L.Map(containerId, { key: cfg.neshan_map_key, maptype: 'neshan', poi: true, traffic: false, center: [lat, lng], zoom });
+  } else {
+    map = L.map(containerId, { attributionControl: false }).setView([lat, lng], zoom);
+    if (cfg.provider === 'google') {
+      L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { subdomains: ['mt0', 'mt1', 'mt2', 'mt3'], maxZoom: 20 }).addTo(map);
+    } else {
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+    }
+  }
+  return {
+    raw: map,
+    addMarker(mlat, mlng, popupHtml, color) {
+      const icon = schoolDivIcon(color || '#0e8a6a');
+      const marker = L.marker([mlat, mlng], { icon }).addTo(map);
+      if (popupHtml) marker.bindPopup(popupHtml);
+      return marker;
+    },
+    addPolyline(points, opts = {}) {
+      const line = L.polyline(points, { weight: opts.weight || 5, opacity: opts.opacity || .85, color: opts.color || '#0d7a5f' }).addTo(map);
+      try { map.fitBounds(line.getBounds(), { padding: [28, 28] }); } catch(e) {}
+      return line;
+    },
+  };
+}
+// آیکون مدرسه (به‌جای نقطهٔ سادهٔ رنگی) — سبز=ثبت‌شده، زرد=باقی‌مانده
+function schoolDivIcon(color) {
+  const html = `<div style="width:34px;height:34px;border-radius:50% 50% 50% 0;background:${color};transform:rotate(-45deg);
+    box-shadow:0 3px 8px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center">
+    <div style="transform:rotate(45deg);font-size:16px;line-height:1">🏫</div></div>`;
+  return L.divIcon({ html, className: '', iconSize: [34, 34], iconAnchor: [17, 34], popupAnchor: [0, -32] });
+}
+
+/* ==================== ناوبری ==================== */
+const TABS = { siteVisits: renderSiteVisits, dashboard: renderDashboard, districts: renderDistricts, companies: renderCompanies, schools: renderSchools, reports: renderReports, settings: renderSettings, adminUsers: renderAdminUsers, schoolFields: renderSchoolFields };
+let CURRENT_TAB = 'dashboard';
+
+const ADMIN_PAGE_META={siteVisits:['📈','آمار بازدید سایت','گزارش بازدید و روند مراجعه به سایت'],districts:['🗺️','نواحی آموزش و پرورش','مدیریت نواحی و وضعیت مدارس'],reports:['📋','گزارش‌ها','گزارش‌های مدیریتی و عملکرد سامانه'],complaints:['📣','مرکز شکایات','مدیریت پرونده‌ها و پاسخ‌گویی'],baleCenter:['🤖','بله و مشترکین','مدیریت ربات و مشترکین'],adminUsers:['👤','کاربران و دسترسی‌ها','مدیریت کاربران و نقش‌ها'],schoolFields:['🧩','آیتم‌های مشخصات مدرسه','مدیریت فیلدهای سفارشی مدارس'],companyFields:['🏷️','آیتم‌های مشخصات شرکت','مدیریت فیلدهای سفارشی شرکت‌ها'],companyReservations:['📌','لیست رزرو شرکت‌ها','مدیریت رزرو و ظرفیت شرکت‌ها'],reservationCoverage:['🧭','وضعیت سرویس‌دهی مدارس','بررسی پوشش سرویس مدارس'],schoolReservationStatus:['🏫','وضعیت مدارس','بررسی وضعیت رزرو مدارس']};
+function enhanceAdminPage(tab){const main=document.getElementById('main');if(!main||tab==='dashboard'||tab==='settings')return;main.classList.add('adminModernPage');const meta=ADMIN_PAGE_META[tab];if(!meta)return;if(!main.querySelector(':scope > .adminModernHero')){const hero=document.createElement('section');hero.className='adminModernHero';hero.innerHTML=`<div class="adminModernHeroMain"><h1>${meta[0]} ${meta[1]}</h1><p>${meta[2]}</p></div><div class="adminModernHeroIcon">${meta[0]}</div><div class="adminModernActions"><button class="btn sm" onclick="goTab('${tab}')">↻ بروزرسانی</button><button class="btn light sm" onclick="goTab('dashboard')">داشبورد</button></div>`;main.prepend(hero);}const old=main.querySelector(':scope > .pageTitle');if(old)old.remove();}
+function goTab(tab) {
+  CURRENT_TAB = tab;
+  document.getElementById('main')?.classList.toggle('settingsPage', tab==='settings');
+  document.querySelectorAll('.nav-item[data-tab]').forEach((el) => el.classList.toggle('active', el.dataset.tab === tab));
+  TABS[tab]();
+}
+function setVal(id, v) { const el = document.getElementById(id); if (el) el.value = v ?? ''; }
+function esc(s) { return (s ?? '').toString().replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function fmtDate(d) { if (!d) return '—'; try { return new Date(d.replace(' ', 'T')).toLocaleString('fa-IR'); } catch (e) { return d; } }
+
+/* ==================== داشبورد ==================== */
+async function renderDashboard() {
+  const main=document.getElementById('main'); main.classList.remove('settingsPage');
+  main.innerHTML=`<section class="dashboardHero"><div class="dashboardHeroTop"><div><h1>داشبورد مدیریت سامانه</h1><p>نمای کلی وضعیت مدارس، شرکت‌ها، ثبت موقعیت و فعالیت‌های اخیر</p></div><div class="dashboardHeroActions"><button class="btn gold sm" onclick="goTab('schools')">＋ ثبت مدرسه</button><button class="btn light sm" onclick="goTab('companies')">＋ شرکت جدید</button><button class="btn light sm" onclick="goTab('reports')">گزارش‌ها</button></div></div><div class="dashboardMeta"><span>سازمان مدیریت و نظارت بر تاکسیرانی شهرداری مشهد مقدس</span><span>${new Date().toLocaleDateString('fa-IR',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</span></div></section><div class="dashboardSectionTitle"><h3>شاخص‌های کلیدی</h3><span>آخرین اطلاعات ثبت‌شده</span></div><div id="dashStats" class="dashboardStats"></div><div class="dashboardSectionTitle"><h3>عملیات سریع و وضعیت ثبت</h3><span>دسترسی مستقیم</span></div><div class="dashboardGrid2"><div class="dashboardPanel" id="progressPanel"></div><div class="dashboardPanel"><h3>دسترسی سریع</h3><div class="dashboardQuick"><button onclick="goTab('schools')">🏫 مدارس<small>مدیریت و خروجی Excel</small></button><button onclick="goTab('companies')">🏢 شرکت‌ها<small>مدیریت شرکت‌ها و نمایندگان</small></button><button onclick="goTab('companyReservations')">📋 رزرو مدارس<small>ظرفیت و رزرو</small></button><button onclick="goTab('reports')">📊 گزارش‌ها<small>گزارش‌های مدیریتی</small></button></div></div></div><div class="dashboardGrid2" style="margin-top:16px"><div class="dashboardPanel"><h3>عملکرد به تفکیک شرکت</h3><div id="byCompanyTbl"></div></div><div class="dashboardPanel"><h3>آخرین فعالیت‌ها</h3><div id="recentTbl"></div></div></div><div class="dashboardPanel dashboardMapPanel"><h3>نمایش مدارس ثبت‌شده روی نقشه</h3><div id="map"></div></div>`;
+  let stats,mapPoints; try{[stats,mapPoints]=await Promise.all([api('/admin/stats'),api('/admin/schools/map')]);}catch(e){toast(e.message,true);return;}
+  const pct=stats.total_schools?Math.round(stats.done/stats.total_schools*100):0;
+  document.getElementById('progressPanel').innerHTML=`<h3>پیشرفت ثبت موقعیت مدارس</h3><div class="dashboardProgress"><div class="dashboardProgressBar"><i style="width:${pct}%"></i></div><div class="dashboardProgressPct">${pct}٪</div></div><div style="font-size:11.5px;color:var(--muted);margin-top:10px">${faNum(stats.done)} مدرسه از ${faNum(stats.total_schools)} مدرسه موقعیت خود را ثبت کرده‌اند.</div>`;
+  const items=[['🏢','تعداد شرکت‌ها',stats.companies],['🏫','تعداد مدارس',stats.total_schools],['🚕','تعداد رانندگان',stats.total_drivers],['🎒','تعداد دانش‌آموزان',stats.total_students],['📨','شکایات دریافتی',stats.complaints_total||0],['📍','ثبت‌شده',stats.done],['⏳','باقی‌مانده',stats.pending],['👥','نمایندگان فعال',stats.reps]];
+  document.getElementById('dashStats').innerHTML=items.map(x=>`<div class="dashboardStat"><div class="ico">${x[0]}</div><div class="v">${typeof x[2]==='number'?faNum(x[2]):esc(x[2]??'—')}</div><div class="l">${x[1]}</div></div>`).join('');
+  document.getElementById('byCompanyTbl').innerHTML=`<table><thead><tr><th>شرکت</th><th>مدارس</th><th>ثبت‌شده</th><th>پیشرفت</th></tr></thead><tbody>${(stats.by_company||[]).map(c=>`<tr><td>${esc(c.title)}</td><td>${faNum(c.total)}</td><td>${faNum(c.done||0)}</td><td><b>${c.total?Math.round((c.done||0)/c.total*100):0}٪</b></td></tr>`).join('')||'<tr><td colspan="4">داده‌ای موجود نیست</td></tr>'}</tbody></table>`;
+  document.getElementById('recentTbl').innerHTML=`<table><thead><tr><th>تاریخ</th><th>مدرسه</th><th>شرکت</th></tr></thead><tbody>${(stats.recent_activity||[]).slice(0,8).map(r=>`<tr><td>${fmtDate(r.created_at)}</td><td>${esc(r.school_name)}</td><td>${esc(r.company_title||'—')}</td></tr>`).join('')||'<tr><td colspan="3">فعالیتی ثبت نشده</td></tr>'}</tbody></table>`;
+  const dashMap=createMap('map',{lat:36.297,lng:59.606,zoom:12}); (mapPoints||[]).forEach(s=>{const color=s.location_status==='done'?'#2fbf71':'#e3a13e'; const popup=`<div style="min-width:190px;font-size:12.5px;line-height:1.9"><b style="font-size:13.5px">${esc(s.name)}</b><br>کد: ${esc(s.code)} | مقطع: ${esc(s.level||'—')}<br>دانش‌آموزان: ${esc(s.student_count??'—')} | رانندگان: ${esc(s.driver_count??'—')}<br>شرکت سرویس‌دهنده: ${esc(s.company_title||'—')}<br>آدرس: ${esc(s.address||'—')}</div>`;dashMap.addMarker(s.lat,s.lng,popup,color);});
+}
+function openDistrictModal(d) {
+  showModal(`<h3>${d ? 'ویرایش ناحیه' : 'ناحیهٔ جدید'}</h3>
+    <div class="field"><label>عنوان ناحیه</label><input id="mTitle" value="${d ? esc(d.title) : ''}"></div>
+    ${d ? `<div class="field"><label><input type="checkbox" id="mActive" ${d.is_active ? 'checked' : ''}> فعال</label></div>` : ''}
+    <div class="modalActions"><button class="btn secondary" onclick="closeModal()">انصراف</button><button class="btn" onclick="saveDistrict(${d ? d.id : 'null'})">ذخیره</button></div>`);
+}
+async function saveDistrict(id) {
+  const title = document.getElementById('mTitle').value.trim();
+  if (!title) return toast('عنوان الزامی است', true);
+  const is_active = document.getElementById('mActive') ? document.getElementById('mActive').checked : true;
+  try {
+    if (id) await api('/admin/districts/' + id, { method: 'PUT', body: { title, is_active } });
+    else await api('/admin/districts', { method: 'POST', body: { title } });
+    closeModal(); toast('ذخیره شد'); renderDistricts(); refreshLookups();
+  } catch (e) { toast(e.message, true); }
+}
+async function deleteDistrict(id) {
+  if (!confirm('حذف این ناحیه؟ مدارس مرتبط بدون ناحیه خواهند شد.')) return;
+  try { await api('/admin/districts/' + id, { method: 'DELETE' }); toast('حذف شد'); renderDistricts(); refreshLookups(); }
+  catch (e) { toast(e.message, true); }
+}
+
+/* ==================== شرکت‌ها ==================== */
+function exportCompanies(){ const q=(document.getElementById('companyAdminSearch')?.value||'').trim(); const qs=new URLSearchParams(); if(q)qs.set('q',q); qs.set('format',document.getElementById('companyExportFormat')?.value||'full'); downloadAdminFile(API+'/admin/companies/export?'+qs.toString(),'companies.xlsx'); }
+async function renderCompanies() {
+  const main = document.getElementById('main');
+  main.innerHTML = `<div class="dashboardHero"><div class="dashboardHeroTop"><div><h1>شرکت‌های حمل‌ونقل دانش‌آموزی</h1><p>مدیریت شرکت‌ها، مشخصات، نمایندگان، ظرفیت و گزارش‌های Excel</p></div><div class="dashboardHeroActions"><button class="btn gold sm" onclick="openCompanyModal()">＋ شرکت جدید</button><button class="btn light sm" onclick="goTab('dashboard')">داشبورد</button></div></div><div class="dashboardMeta"><span>مدیریت شرکت‌های سرویس مدارس</span></div></div>
+    <div class="toolbar"><div class="spacer"></div><select id="companyExportFormat" title="نوع خروجی"><option value="full">Excel کامل</option><option value="summary">Excel خلاصه</option><option value="contact">Excel اطلاعات تماس</option></select><button class="btn secondary" onclick="exportCompanies()">خروجی Excel</button><button class="btn" onclick="openCompanyModal()">+ شرکت جدید</button></div>
+    <div class="panel"><div id="companiesTbl">در حال بارگذاری...</div></div>`;
+  const rows = await api('/admin/companies'); CACHE.companies = rows;
+  document.getElementById('companiesTbl').innerHTML = `<table><thead><tr><th>نام شرکت</th><th>مدیرعامل</th><th>تلفن</th><th>مدارس</th><th>ثبت‌شده</th><th>نمایندگان</th><th>وضعیت</th><th></th></tr></thead><tbody>
+    ${rows.map((c) => `<tr>
+      <td>${esc(c.title)}</td><td>${esc(c.manager_name || '—')}</td><td>${esc(c.phone || '—')}</td>
+      <td>${c.schools_count}</td><td>${c.done_count}</td><td>${c.users_count}</td>
+      <td>${c.is_active ? '<span class="badge done">فعال</span>' : '<span class="badge pending">غیرفعال</span>'}</td>
+      <td><button class="btn secondary sm" onclick="openCompanyDetail(${c.id})">جزئیات/نمایندگان</button>
+          <button class="btn danger sm" onclick="deleteCompany(${c.id})">حذف</button></td>
+    </tr>`).join('') || '<tr><td colspan=8>شرکتی ثبت نشده</td></tr>'}
+  </tbody></table>`;
+}
+function openCompanyModal(c) {
+  showModal(`<h3>${c ? 'ویرایش شرکت' : 'شرکت جدید'}</h3>
+    <div class="field"><label>نام شرکت</label><input id="mTitle" value="${c ? esc(c.title) : ''}"></div>
+    <div class="field"><label>نام مدیرعامل</label><input id="mManager" value="${c ? esc(c.manager_name || '') : ''}"></div>
+    <div class="field"><label>تلفن</label><input id="mPhone" value="${c ? esc(c.phone || '') : ''}"></div>
+    <div class="field"><label>آدرس</label><input id="mAddress" value="${c ? esc(c.address || '') : ''}"></div>
+    ${c ? `<div class="field"><label><input type="checkbox" id="mActive" ${c.is_active ? 'checked' : ''}> فعال</label></div>` : ''}
+    <div class="modalActions"><button class="btn secondary" onclick="closeModal()">انصراف</button><button class="btn" onclick="saveCompany(${c ? c.id : 'null'})">ذخیره</button></div>`);
+}
+async function saveCompany(id) {
+  const body = {
+    title: document.getElementById('mTitle').value.trim(),
+    manager_name: document.getElementById('mManager').value.trim(),
+    phone: document.getElementById('mPhone').value.trim(),
+    address: document.getElementById('mAddress').value.trim(),
+  };
+  if (!body.title) return toast('نام شرکت الزامی است', true);
+  if (document.getElementById('mActive')) body.is_active = document.getElementById('mActive').checked;
+  try {
+    if (id) await api('/admin/companies/' + id, { method: 'PUT', body });
+    else await api('/admin/companies', { method: 'POST', body });
+    closeModal(); toast('ذخیره شد'); renderCompanies(); refreshLookups();
+  } catch (e) { toast(e.message, true); }
+}
+async function deleteCompany(id) {
+  if (!confirm('حذف این شرکت؟ نمایندگان آن نیز حذف خواهند شد.')) return;
+  try { await api('/admin/companies/' + id, { method: 'DELETE' }); toast('حذف شد'); renderCompanies(); refreshLookups(); }
+  catch (e) { toast(e.message, true); }
+}
+async function openCompanyDetail(id) {
+  const c = await api('/admin/companies/' + id);
+  showModal(`<h3>${esc(c.title)}</h3>
+    <div style="display:flex;gap:8px;margin-bottom:6px">
+      <button class="btn secondary sm" onclick='closeModal();openCompanyModal(${JSON.stringify(c)})'>ویرایش اطلاعات شرکت</button>
+      <button class="btn sm" onclick="location.href='${API}/admin/reports/company/${id}/export?token=${encodeURIComponent(TOKEN)}'">خروجی گزارش شرکت</button>
+    </div>
+    <div class="usersList">
+      <b>نمایندگان شرکت</b>
+      <div id="usersListInner">${renderUsersList(c.users, id)}</div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+        <div class="field"><label>نام کاربری نمایندهٔ جدید</label><input id="nuUser"></div>
+        <div class="field"><label>نام کامل</label><input id="nuName"></div>
+        <div class="field"><label>تلفن</label><input id="nuPhone"></div>
+        <div class="field"><label>رمز عبور</label><input id="nuPass" type="text"></div>
+        <button class="btn sm" onclick="addCompanyUser(${id})">افزودن نماینده</button>
+      </div>
+    </div>
+    <div class="modalActions"><button class="btn secondary" onclick="closeModal()">بستن</button></div>`);
+}
+function renderUsersList(users, companyId) {
+  if (!users || !users.length) return '<div style="color:var(--muted);font-size:12px;margin:8px 0">نماینده‌ای ثبت نشده</div>';
+  return users.map((u) => `<div class="userRow">
+    <span>${esc(u.full_name)} (${esc(u.username)}) ${u.is_active ? '' : '<span class="badge pending">غیرفعال</span>'}</span>
+    <span>
+      <button class="btn secondary sm" onclick="resetUserPass(${u.id})">تغییر رمز</button>
+      <button class="btn secondary sm" onclick="toggleUserActive(${u.id}, ${u.is_active ? 0 : 1}, ${companyId})">${u.is_active ? 'غیرفعال‌سازی' : 'فعال‌سازی'}</button>
+      <button class="btn danger sm" onclick="deleteCompanyUser(${u.id}, ${companyId})">حذف</button>
+    </span></div>`).join('');
+}
+async function addCompanyUser(companyId) {
+  const body = {
+    username: document.getElementById('nuUser').value.trim(),
+    full_name: document.getElementById('nuName').value.trim(),
+    phone: document.getElementById('nuPhone').value.trim(),
+    password: document.getElementById('nuPass').value,
+  };
+  if (!body.username || !body.full_name || !body.password) return toast('نام کاربری، نام کامل و رمز عبور الزامی است', true);
+  try { await api('/admin/companies/' + companyId + '/users', { method: 'POST', body }); toast('نماینده اضافه شد'); closeModal(); openCompanyDetail(companyId); renderCompanies(); }
+  catch (e) { toast(e.message, true); }
+}
+async function resetUserPass(userId) {
+  const pw = prompt('رمز عبور جدید را وارد کنید (حداقل ۴ کاراکتر):');
+  if (!pw) return;
+  try { await api('/admin/company-users/' + userId, { method: 'PUT', body: { password: pw } }); toast('رمز عبور تغییر کرد'); }
+  catch (e) { toast(e.message, true); }
+}
+async function toggleUserActive(userId, val, companyId) {
+  try { await api('/admin/company-users/' + userId, { method: 'PUT', body: { is_active: val } }); closeModal(); openCompanyDetail(companyId); renderCompanies(); }
+  catch (e) { toast(e.message, true); }
+}
+async function deleteCompanyUser(userId, companyId) {
+  if (!confirm('حذف این نماینده؟')) return;
+  try { await api('/admin/company-users/' + userId, { method: 'DELETE' }); closeModal(); openCompanyDetail(companyId); renderCompanies(); }
+  catch (e) { toast(e.message, true); }
+}
+
+/* ==================== مدارس ==================== */
+let SCHOOL_PAGE = 1, SCHOOL_FILTERS = {};
+async function renderSchools() {
+  const main = document.getElementById('main');
+  main.innerHTML = `<div class="dashboardHero"><div class="dashboardHeroTop"><div><h1>مدارس</h1><p>مدیریت اطلاعات مدارس، جستجو، فیلتر، ایمپورت و گزارش‌های Excel</p></div><div class="dashboardHeroActions"><button class="btn gold sm" onclick="openSchoolModal()">＋ مدرسه جدید</button><button class="btn light sm" onclick="goTab('dashboard')">داشبورد</button></div></div><div class="dashboardMeta"><span>مدیریت اطلاعات مدارس سامانه</span></div></div>
+    <div class="toolbar">
+      <input id="fQ" placeholder="جستجوی نام یا کد مدرسه" oninput="debounceSearch()">
+      <select id="fDistrict" onchange="applyFilters()"><option value="">همهٔ نواحی</option>${CACHE.districts.map((d) => `<option value="${d.id}">${esc(d.title)}</option>`).join('')}</select>
+      <select id="fCompany" onchange="applyFilters()"><option value="">همهٔ شرکت‌ها</option>${CACHE.companies.map((c) => `<option value="${c.id}">${esc(c.title)}</option>`).join('')}</select>
+      <select id="fStatus" onchange="applyFilters()"><option value="">همهٔ وضعیت‌ها</option><option value="done">ثبت‌شده</option><option value="pending">باقی‌مانده</option></select>
+      <div class="spacer"></div>
+      <select id="schoolExportFormat" title="نوع خروجی"><option value="full">Excel کامل</option><option value="summary">Excel خلاصه</option><option value="contact">Excel اطلاعات تماس</option></select><button class="btn secondary" onclick="exportSchools()">خروجی Excel</button>
+      <button class="btn secondary" onclick="document.getElementById('importFile').click()">ایمپورت اکسل</button>
+      <input type="file" id="importFile" accept=".xlsx" class="hidden" onchange="importSchools(this)">
+      <button class="btn" onclick="openSchoolModal()">+ مدرسهٔ جدید</button>
+    </div>
+    <div class="panel"><div id="schoolsTbl">در حال بارگذاری...</div><div class="pagination" id="schoolsPager"></div></div>`;
+  await loadSchools();
+}
+let searchTimer;
+function debounceSearch() { clearTimeout(searchTimer); searchTimer = setTimeout(applyFilters, 400); }
+function applyFilters() {
+  SCHOOL_FILTERS = { q: document.getElementById('fQ').value, district_id: document.getElementById('fDistrict').value, company_id: document.getElementById('fCompany').value, status: document.getElementById('fStatus').value };
+  SCHOOL_PAGE = 1; loadSchools();
+}
+async function loadSchools() {
+  const qs = new URLSearchParams({ ...SCHOOL_FILTERS, page: SCHOOL_PAGE, per: 30 });
+  let data;
+  try { data = await api('/admin/schools?' + qs.toString()); } catch (e) { toast(e.message, true); return; }
+  document.getElementById('schoolHeaderCount') && (document.getElementById('schoolHeaderCount').textContent = Number(data.total ?? data.items?.length ?? 0).toLocaleString('fa-IR'));
+  document.getElementById('schoolsTbl').innerHTML = `<table><thead><tr><th>کد</th><th>نام مدرسه</th><th>ناحیه</th><th>شرکت</th><th>وضعیت</th><th>ثبت‌کننده</th><th></th></tr></thead><tbody>
+    ${data.items.map((s) => `<tr>
+      <td>${esc(s.code)}</td><td>${esc(s.name)}</td><td>${esc(s.district_title || '—')}</td><td>${esc(s.company_title || '—')}</td>
+      <td>${s.location_status === 'done' ? '<span class="badge done">ثبت‌شده</span>' : '<span class="badge pending">باقی‌مانده</span>'}</td>
+      <td>${esc(s.editor_name || '—')}</td>
+      <td><button class="btn secondary sm" onclick="openSchoolDetail(${s.id})">مشاهده/ویرایش</button>
+          ${s.lat ? `<button class="btn secondary sm" onclick="showSchoolOnMap(${s.id}, ${s.lat}, ${s.lng}, '${esc(s.name).replace(/'/g, "\\'")}')">نمایش در نقشه</button>` : ''}
+          <button class="btn danger sm" onclick="deleteSchool(${s.id})">حذف</button></td>
+    </tr>`).join('') || '<tr><td colspan=7>مدرسه‌ای یافت نشد</td></tr>'}
+  </tbody></table>`;
+  const pager = document.getElementById('schoolsPager'); pager.innerHTML = '';
+  for (let i = 1; i <= data.pages; i++) {
+    const b = document.createElement('button'); b.textContent = i; if (i === data.page) b.classList.add('active');
+    b.onclick = () => { SCHOOL_PAGE = i; loadSchools(); }; pager.appendChild(b);
+  }
+}
+function exportSchools() {
+  const qs = new URLSearchParams({ ...SCHOOL_FILTERS, token: TOKEN });
+  window.open(API + '/admin/schools/export?' + qs.toString(), '_blank');
+}
+async function importSchools(input) {
+  const file = input.files[0]; if (!file) return;
+  const fd = new FormData(); fd.append('file', file);
+  toast('در حال ایمپورت...');
+  try {
+    const r = await api('/admin/schools/import', { method: 'POST', body: fd });
+    toast(`ایمپورت انجام شد: ${r.inserted} جدید، ${r.updated} بروزرسانی، ${r.skipped} نادیده گرفته‌شده`);
+    if (r.errors && r.errors.length) console.warn('خطاهای ایمپورت:', r.errors);
+    loadSchools(); refreshLookups();
+  } catch (e) { toast(e.message, true); }
+  input.value = '';
+}
+function showSchoolOnMap(id, lat, lng, name) {
+  showModal(`<h3>موقعیت مدرسه: ${esc(name)}</h3><div id="standaloneMap" style="height:340px;border-radius:10px"></div>
+    <div class="modalActions"><button class="btn secondary" onclick="closeModal()">بستن</button></div>`);
+  setTimeout(() => {
+    const m = createMap('standaloneMap', { lat, lng, zoom: 16 });
+    m.addMarker(lat, lng, esc(name));
+  }, 50);
+}
+function openSchoolModal(s) {
+  showModal(`<h3>${s ? 'ویرایش مدرسه' : 'مدرسهٔ جدید'}</h3>
+    <div class="field"><label>کد یکتای مدرسه</label><input id="mCode" value="${s ? esc(s.code) : ''}" ${s ? 'disabled' : ''}></div>
+    <div class="field"><label>نام مدرسه</label><input id="mName" value="${s ? esc(s.name) : ''}"></div>
+    <div class="field"><label>ناحیهٔ آموزش و پرورش</label><select id="mDistrict"><option value="">—</option>${CACHE.districts.map((d) => `<option value="${d.id}" ${s && s.district_id == d.id ? 'selected' : ''}>${esc(d.title)}</option>`).join('')}</select></div>
+    <div class="field"><label>شرکت سرویس‌دهنده</label><select id="mCompany"><option value="">—</option>${CACHE.companies.map((c) => `<option value="${c.id}" ${s && s.company_id == c.id ? 'selected' : ''}>${esc(c.title)}</option>`).join('')}</select></div>
+    <div class="field"><label>جنسیت دانش‌آموزان</label><select id="mGender"><option value="">—</option>${['پسرانه', 'دخترانه', 'مختلط'].map((g) => `<option ${s && s.gender === g ? 'selected' : ''}>${g}</option>`).join('')}</select></div>
+    <div class="field"><label>مقطع تحصیلی</label><select id="mLevel"><option value="">—</option>${(CACHE.levels || []).map((g) => `<option value="${esc(g.title)}" ${s && s.level === g.title ? 'selected' : ''}>${esc(g.title)}</option>`).join('')}</select></div>
+    <div class="field"><label>شیفت</label><select id="mShift"><option value="">—</option>${['صبح', 'عصر', 'دو شیفته'].map((g) => `<option ${s && s.shift === g ? 'selected' : ''}>${g}</option>`).join('')}</select></div>
+    <div class="field"><label>نوع مدرسه</label><select id="mSchoolType"><option value="">—</option>${['دولتی', 'غیردولتی'].map((g) => `<option ${s && s.school_type === g ? 'selected' : ''}>${g}</option>`).join('')}</select></div>
+    <div class="field"><label>ساعت شروع فعالیت مدرسه</label><input id="mStartTime" type="time" value="${s ? esc(s.start_time || '') : ''}"></div>
+    <div class="field"><label>ساعت پایان فعالیت مدرسه</label><input id="mEndTime" type="time" value="${s ? esc(s.end_time || '') : ''}"></div>
+    <div class="field"><label>تعداد دانش‌آموزان تحت پوشش</label><input id="mStudentCount" type="number" min="0" value="${s ? esc(s.student_count ?? '') : ''}"></div>
+    <div class="field"><label>تعداد رانندگان به‌کارگیری‌شده برای سرویس مدرسه</label><input id="mDriverCount" type="number" min="0" value="${s ? esc(s.driver_count ?? '') : ''}"></div>
+    <div class="field"><label>آدرس</label><input id="mAddress" value="${s ? esc(s.address || '') : ''}"></div>
+    <div class="field"><label>تلفن</label><input id="mPhone" value="${s ? esc(s.phone || '') : ''}"></div>
+    ${renderCustomFieldInputs(s)}
+    <div class="modalActions"><button class="btn secondary" onclick="closeModal()">انصراف</button><button class="btn" onclick="saveSchool(${s ? s.id : 'null'})">ذخیره</button></div>`);
+}
+function renderCustomFieldInputs(s) {
+  const defs = CACHE.schoolFieldDefs || []; if (!defs.length) return '';
+  const existing = s && s.custom_fields ? (typeof s.custom_fields === 'string' ? JSON.parse(s.custom_fields || '{}') : s.custom_fields) : {};
+  return `<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:14px">
+    ${defs.map((d) => {
+      const val = existing[d.field_key] ?? '';
+      const cid = 'cf_' + d.field_key;
+      if (d.field_type === 'select') {
+        const opts = (d.options || '').split(',').map((o) => o.trim()).filter(Boolean);
+        return `<div class="field"><label>${esc(d.label)}</label><select id="${cid}"><option value="">—</option>${opts.map((o) => `<option value="${esc(o)}" ${val === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select></div>`;
+      }
+      if (d.field_type === 'checkbox') return `<div class="field"><label><input type="checkbox" id="${cid}" ${val ? 'checked' : ''}> ${esc(d.label)}</label></div>`;
+      const inputType = d.field_type === 'number' ? 'number' : d.field_type === 'date' ? 'date' : 'text';
+      return `<div class="field"><label>${esc(d.label)}</label><input id="${cid}" type="${inputType}" value="${esc(val)}"></div>`;
+    }).join('')}
+  </div>`;
+}
+function collectCustomFieldValues() {
+  const out = {};
+  (CACHE.schoolFieldDefs || []).forEach((d) => {
+    const el = document.getElementById('cf_' + d.field_key); if (!el) return;
+    out[d.field_key] = d.field_type === 'checkbox' ? el.checked : el.value;
+  });
+  return out;
+}
+async function saveSchool(id) {
+  const body = {
+    code: document.getElementById('mCode').value.trim(), name: document.getElementById('mName').value.trim(),
+    district_id: document.getElementById('mDistrict').value || null, company_id: document.getElementById('mCompany').value || null,
+    gender: document.getElementById('mGender').value, shift: document.getElementById('mShift').value,
+    level: document.getElementById('mLevel').value, school_type: document.getElementById('mSchoolType').value,
+    start_time: document.getElementById('mStartTime').value, end_time: document.getElementById('mEndTime').value,
+    student_count: document.getElementById('mStudentCount').value || null, driver_count: document.getElementById('mDriverCount').value || null,
+    address: document.getElementById('mAddress').value, phone: document.getElementById('mPhone').value,
+    custom_fields: collectCustomFieldValues(),
+  };
+  if (!body.name) return toast('نام مدرسه الزامی است', true);
+  try {
+    if (id) await api('/admin/schools/' + id, { method: 'PUT', body });
+    else { if (!body.code) return toast('کد مدرسه الزامی است', true); await api('/admin/schools', { method: 'POST', body }); }
+    closeModal(); toast('ذخیره شد'); loadSchools();
+  } catch (e) { toast(e.message, true); }
+}
+async function deleteSchool(id) {
+  if (!confirm('حذف این مدرسه؟')) return;
+  try { await api('/admin/schools/' + id, { method: 'DELETE' }); toast('حذف شد'); loadSchools(); }
+  catch (e) { toast(e.message, true); }
+}
+async function openSchoolDetail(id) {
+  const s = await api('/admin/schools/' + id);
+  const photo = s.photo_url ? `<img src="${API}/media?path=${encodeURIComponent(s.photo_path)}&token=${encodeURIComponent(TOKEN)}" style="width:100%;border-radius:10px;margin:10px 0">` : '';
+  const mapDiv = s.lat ? `<div id="detailMap" style="height:200px;border-radius:10px;margin:10px 0"></div>` : '';
+  showModal(`<h3>${esc(s.name)} <span style="color:var(--muted);font-size:12px">(کد ${esc(s.code)})</span></h3>
+    <div style="font-size:12.5px;line-height:2">
+      <div>ناحیه: ${esc(s.district_title || '—')} | شرکت: ${esc(s.company_title || '—')}</div>
+      <div>جنسیت: ${esc(s.gender || '—')} | مقطع: ${esc(s.level || '—')} | شیفت: ${esc(s.shift || '—')} | نوع مدرسه: ${esc(s.school_type || '—')}</div>
+      <div>ساعت فعالیت: ${esc(s.start_time || '—')} تا ${esc(s.end_time || '—')}</div>
+      <div>تعداد دانش‌آموز: ${esc(s.student_count ?? '—')} | تعداد راننده: ${esc(s.driver_count ?? '—')}</div>
+      <div>آدرس: ${esc(s.address || '—')} | تلفن: ${esc(s.phone || '—')}</div>
+      <div>وضعیت: ${s.location_status === 'done' ? '<span class="badge done">ثبت‌شده</span>' : '<span class="badge pending">باقی‌مانده</span>'}</div>
+      ${s.lat ? `<div>مختصات: ${Number(s.lat).toFixed(6)}, ${Number(s.lng).toFixed(6)}</div>` : ''}
+    </div>
+    ${photo}${mapDiv}
+    <div class="usersList"><b>تاریخچهٔ بازدید/ویرایش</b>
+      ${(s.logs || []).map((l) => `<div class="userRow"><span>${esc(l.editor_name)} — ${l.action === 'create' ? 'ثبت اولیه' : 'ویرایش'}</span><span>${fmtDate(l.created_at)}</span></div>`).join('') || '<div style="color:var(--muted);font-size:12px;margin-top:8px">بازدیدی ثبت نشده</div>'}
+    </div>
+    <div class="modalActions"><button class="btn secondary" onclick="closeModal()">بستن</button><button class="btn" onclick='closeModal();openSchoolModal(${JSON.stringify(s)})'>ویرایش اطلاعات</button></div>`);
+  if (s.lat) setTimeout(() => {
+    const dm = createMap('detailMap', { lat: s.lat, lng: s.lng, zoom: 16 });
+    dm.addMarker(s.lat, s.lng);
+  }, 50);
+}
+
+/* ==================== گزارش‌ها ==================== */
+async function renderReports() {
+  const main = document.getElementById('main');
+  main.innerHTML = `<div class="dashboardHero"><div class="dashboardHeroTop"><div><h1>گزارش‌گیری عملکرد شرکت‌ها</h1><p>گزارش‌های مدیریتی، عملکرد شرکت‌ها و خروجی‌های Excel سامانه</p></div><div class="dashboardHeroActions"><button class="btn light sm" onclick="goTab('dashboard')">داشبورد</button></div></div><div class="dashboardMeta"><span>مرکز گزارش‌های مدیریتی سامانه</span></div></div>
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:800">گزارش جامع کل سامانه</div>
+        <button class="btn dark" onclick="exportFullReport()">خروجی اکسل کامل (شرکت‌ها، نمایندگان، نواحی، مدارس)</button>
+      </div>
+    </div>
+    <div class="panel"><div class="toolbar"><select id="repCompany">${CACHE.companies.map((c) => `<option value="${c.id}">${esc(c.title)}</option>`).join('')}</select>
+      <button class="btn secondary" onclick="loadCompanyReport()">نمایش گزارش</button>
+      <button class="btn" onclick="exportCompanyReport()">خروجی اکسل این شرکت</button></div>
+      <div id="reportBody"></div></div>`;
+  if (CACHE.companies.length) loadCompanyReport();
+}
+function exportFullReport() {
+  window.open(API + '/admin/reports/full-export?token=' + encodeURIComponent(TOKEN), '_blank');
+}
+async function loadCompanyReport() {
+  const id = document.getElementById('repCompany').value; if (!id) return;
+  const r = await api('/admin/reports/company/' + id);
+  document.getElementById('reportBody').innerHTML = `
+    <h4>عملکرد نمایندگان</h4>
+    <table><thead><tr><th>نماینده</th><th>تعداد ورود</th><th>تعداد ویرایش</th><th>مدارس منحصربه‌فرد</th><th>آخرین ورود</th></tr></thead><tbody>
+      ${r.per_user.map((u) => `<tr><td>${esc(u.full_name)}</td><td>${u.login_count}</td><td>${u.visits_count}</td><td>${u.schools_touched}</td><td>${fmtDate(u.last_login_at)}</td></tr>`).join('') || '<tr><td colspan=5>داده‌ای نیست</td></tr>'}
+    </tbody></table>
+    <h4 style="margin-top:20px">وضعیت مدارس شرکت</h4>
+    <table><thead><tr><th>کد</th><th>نام مدرسه</th><th>ناحیه</th><th>وضعیت</th><th>تاریخ ثبت</th><th>ثبت‌کننده</th></tr></thead><tbody>
+      ${r.schools.map((s) => `<tr><td>${esc(s.code)}</td><td>${esc(s.name)}</td><td>${esc(s.district_title || '—')}</td>
+        <td>${s.location_status === 'done' ? '<span class="badge done">ثبت‌شده</span>' : '<span class="badge pending">باقی‌مانده</span>'}</td>
+        <td>${fmtDate(s.location_recorded_at)}</td><td>${esc(s.editor_name || '—')}</td></tr>`).join('') || '<tr><td colspan=6>مدرسه‌ای نیست</td></tr>'}
+    </tbody></table>`;
+}
+function exportCompanyReport() {
+  const id = document.getElementById('repCompany').value; if (!id) return;
+  window.open(API + '/admin/reports/company/' + id + '/export?token=' + encodeURIComponent(TOKEN), '_blank');
+}
+
+/* ==================== تنظیمات سامانه ==================== */
+/* ==================== آمار بازدید سایت ==================== */
+function siteVisitFaNum(n){return Number(n||0).toLocaleString('fa-IR');}
+async function renderSiteVisits(){
+  if(ME?.role!=='super_admin'){toast('فقط مدیر کل به آمار بازدید دسترسی دارد.',true);return goTab('dashboard');}
+  const main=document.getElementById('main');
+  main.innerHTML=`<div class="pageTitle">آمار بازدید سایت</div>
+  <div class="panel settingsCard settingsCardWide"><div class="settingsCardHead"><div><h3>گزارش حرفه‌ای بازدیدهای سایت</h3><p>آمار روزانه، هفتگی، ماهانه و بازهٔ دلخواه با تاریخ شمسی و خروجی Excel</p></div><span class="settingsIcon">📊</span></div>
+  <div class="siteVisitToolbar"><div class="field"><label>نوع گزارش</label><select id="svGroup" onchange="toggleSiteVisitCustom()"><option value="day">روزانه — ۳۰ روز اخیر</option><option value="week">هفتگی — ۱۲ هفته اخیر</option><option value="month">ماهانه — ۱۲ ماه اخیر</option><option value="custom">تاریخ تا تاریخ — روزانه</option></select></div>
+  <div class="field hidden" id="svFromWrap"><label>از تاریخ شمسی</label><input id="svFrom" placeholder="۱۴۰۵/۰۱/۰۱" inputmode="numeric"></div><div class="field hidden" id="svToWrap"><label>تا تاریخ شمسی</label><input id="svTo" placeholder="۱۴۰۵/۰۱/۳۱" inputmode="numeric"></div>
+  <button class="btn" onclick="loadSiteVisits()">نمایش گزارش</button><button class="btn secondary" onclick="exportSiteVisits()">خروجی اکسل</button></div>
+  <div id="svKpis" class="siteVisitsKpis"></div><div id="svChart" class="siteVisitChart"></div><div class="siteVisitLegend">نمودار بر اساس تعداد بازدید صفحات است. بازدیدکننده یکتا با شناسهٔ ناشناس مرورگر و IP به‌صورت هش‌شده محاسبه می‌شود و IP خام در گزارش ذخیره نمی‌شود.</div><div id="svTable" style="margin-top:14px">در حال بارگذاری...</div></div>`;
+  await loadSiteVisits();
+}
+function toggleSiteVisitCustom(){const c=document.getElementById('svGroup')?.value==='custom';['svFromWrap','svToWrap'].forEach(id=>document.getElementById(id)?.classList.toggle('hidden',!c));}
+async function loadSiteVisits(){try{const g=document.getElementById('svGroup')?.value||'day';let q='?group='+encodeURIComponent(g);if(g==='custom'){const f=document.getElementById('svFrom').value.trim(),t=document.getElementById('svTo').value.trim();if(!f||!t)return toast('تاریخ شروع و پایان را وارد کنید.',true);q+='&from='+encodeURIComponent(f)+'&to='+encodeURIComponent(t)}const d=await api('/admin/site-visits'+q);document.getElementById('svKpis').innerHTML=[['کل بازدید صفحات',d.page_views],['بازدیدکننده یکتا',d.unique_visitors],['تعداد بازه‌های گزارش',d.rows.length],['بازه گزارش',d.from+' تا '+d.to]].map(x=>`<div class="siteVisitKpi"><div class="v">${typeof x[1]==='number'?siteVisitFaNum(x[1]):esc(x[1])}</div><div class="l">${x[0]}</div></div>`).join('');const max=Math.max(1,...d.rows.map(r=>Number(r.page_views)||0));document.getElementById('svChart').innerHTML=d.rows.length?d.rows.map(r=>{const h=Math.max(3,Math.round((r.page_views/max)*190));return `<div class="siteVisitBar" title="${esc(r.period)} — ${siteVisitFaNum(r.page_views)} بازدید"><i style="height:${h}px"></i><span>${esc(r.period)}</span></div>`}).join(''):'<div style="margin:auto;color:var(--muted)">داده‌ای برای این بازه ثبت نشده است.</div>';document.getElementById('svTable').innerHTML=`<table><thead><tr><th>بازه شمسی</th><th>تعداد بازدید</th><th>بازدیدکننده یکتا</th></tr></thead><tbody>${d.rows.map(r=>`<tr><td>${esc(r.period)}</td><td>${siteVisitFaNum(r.page_views)}</td><td>${siteVisitFaNum(r.unique_visitors)}</td></tr>`).join('')||'<tr><td colspan="3">داده‌ای ثبت نشده است.</td></tr>'}</tbody></table>`;}catch(e){toast(e.message,true)}}
+async function exportSiteVisits(){try{const g=document.getElementById('svGroup')?.value||'day';let q='?group='+encodeURIComponent(g);if(g==='custom'){const f=document.getElementById('svFrom').value.trim(),t=document.getElementById('svTo').value.trim();if(!f||!t)return toast('تاریخ شروع و پایان را وارد کنید.',true);q+='&from='+encodeURIComponent(f)+'&to='+encodeURIComponent(t)}const res=await fetch(API+'/admin/site-visits/export'+q,{headers:{Authorization:'Bearer '+TOKEN}});if(!res.ok){let d={};try{d=await res.json()}catch(e){}throw new Error(d.error||('خطا '+res.status))}const blob=await res.blob();const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='site-visits.xlsx';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){toast(e.message,true)}}
+
+async function renderSettings() {
+  const main=document.getElementById('main'); main.classList.add('settingsPage');
+  main.innerHTML = `<div class="settingsHero"><div><h1>تنظیمات سامانه</h1><p>مدیریت متمرکز ظاهر، اطلاعات پایه، دسترسی‌ها، نقشه، پیامک و تنظیمات فنی سامانه</p></div><div class="settingsHeroBadge"><i>⚙️</i> پنل مدیریت سیستم</div></div><div class="settingsSectionIntro"><div><h2>تنظیمات سامانه</h2><p>پیکربندی متمرکز سامانه؛ فقط بخش انتخاب‌شده را مدیریت کنید.</p></div></div>
+    <div class="panel" style="max-width:520px">
+      <h3>برندینگ سایت</h3>
+      <div class="field"><label>عنوان سایت</label><input id="setSiteTitle"></div>
+      <div class="field"><label>متن زیرعنوان هدر</label><input id="setHeaderSubtitle"></div>
+      <div class="field"><label>لوگو</label><br>
+        <img id="curLogoPreview" src="assets/icon-mark.png" style="width:52px;height:52px;border-radius:10px;vertical-align:middle;margin-left:10px">
+        <button class="btn secondary sm" onclick="document.getElementById('logoFile').click()">تغییر لوگو</button>
+        <input type="file" id="logoFile" accept="image/*" class="hidden" onchange="uploadLogo(this)">
+      </div>
+      <button class="btn" onclick="saveAppConfig()">ذخیرهٔ برندینگ</button>
+    </div>
+
+    <div class="panel" style="max-width:520px">
+      <h3>مقاطع تحصیلی</h3>
+      <div id="levelsListWrap"></div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <input id="newLevelTitle" placeholder="عنوان مقطع جدید" style="flex:1">
+        <button class="btn sm" onclick="addLevel()">افزودن</button>
+      </div>
+    </div>
+
+    <div class="panel" style="max-width:520px">
+      <h3>دسترسی نمایندگان شرکت</h3>
+      <label style="font-size:13px;display:flex;align-items:center;gap:8px"><input type="checkbox" id="setRepCanViewList"> نماینده بتواند لیست کامل مدارس شرکت خودش را در اپ ببیند</label>
+      <button class="btn" style="margin-top:14px" onclick="saveAppConfig()">ذخیره</button>
+    </div>
+
+    <div class="panel" style="max-width:520px">
+      <h3>پیامک (وب‌سرویس نگین)</h3>
+      <label style="font-size:13px;display:flex;align-items:center;gap:8px;margin-bottom:12px"><input type="checkbox" id="setSmsEnabled"> فعال‌سازی ارسال پیامک (برای بازیابی رمز عبور نمایندگان)</label>
+      <div class="field"><label>نام کاربری وب‌سرویس نگین</label><input id="setSmsUser"></div>
+      <div class="field"><label>رمز عبور وب‌سرویس (خالی=بدون تغییر)</label><input id="setSmsPass" type="password" placeholder="●●●●●●●●"></div>
+      <div class="field"><label>شمارهٔ خط ارسال (اختیاری)</label><input id="setSmsLine"></div>
+      <button class="btn" onclick="saveSmsConfig()">ذخیرهٔ تنظیمات پیامک</button>
+    </div>
+
+
+    <div class="panel" style="max-width:900px">
+      <h3>محاسبه ارزش‌گذاری سرویس حمل‌ونقل دانش‌آموزی</h3>
+      <div class="calcHint">روش محاسبه را انتخاب کنید. در حالت «فایل ارزش‌گذاری» نرخ‌های رسمی فایل اکسل ارسالی بر اساس مسافت رفت‌وبرگشت و کلاس خودرو استفاده می‌شود. در حالت «مکان/نرخ کیلومتری» جدول نرخ هر کیلومتر تنظیم‌شده در سامانه استفاده خواهد شد.</div>
+      <div class="field"><label>روش محاسبه ارزش‌گذاری</label><select id="servicePricingMode" onchange="togglePricingMode()"><option value="excel">ارزش‌گذاری بر اساس فایل اکسل</option><option value="map">ارزش‌گذاری بر اساس مکان نقشه و نرخ کیلومتری</option></select></div>
+      <div id="excelPricingInfo" class="calcHint" style="margin-top:10px"></div>
+      <div id="mapPricingEditor">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0"><input id="newVehicleKey" placeholder="کد کلاس خودرو مثال: sedan" style="max-width:170px"><input id="newVehicleTitle" placeholder="عنوان کلاس خودرو مثال: سواری" style="max-width:220px"><button class="btn sm" onclick="addVehicleClassRow()">افزودن کلاس خودرو</button></div>
+        <div id="pricingVehicleList"></div><div id="pricingRatesWrap" style="margin-top:14px"></div>
+      </div>
+      <button class="btn" style="margin-top:14px" onclick="saveServicePricing()">ذخیره روش ارزش‌گذاری</button>
+    </div>
+
+    <div class="panel" style="max-width:520px">
+      <h3>نقشه</h3>
+      <div class="field"><label>ارائه‌دهندهٔ نقشه</label>
+        <select id="setMapProvider">
+          <option value="osm">OpenStreetMap (رایگان، پیش‌فرض)</option>
+          <option value="neshan">نشان (Neshan)</option>
+          <option value="google">گوگل مپ</option>
+        </select>
+      </div>
+      <div class="field"><label>کلید API نقشهٔ نشان (Map Key)</label><input id="setNeshanMapKey" placeholder="از پنل توسعه‌دهندگان نشان"></div>
+      <div class="field"><label>کلید API وب‌سرویس نشان (اختیاری، برای جست‌وجوی آدرس)</label><input id="setNeshanApiKey"></div>
+      <div class="field"><label>کلید Google Maps (اختیاری)</label><input id="setGoogleKey"></div>
+      <button class="btn" onclick="saveMapConfig()">ذخیرهٔ تنظیمات نقشه</button>
+    </div>
+    <div class="panel" style="max-width:520px">
+      <h3>آدرس دامنهٔ سایت</h3>
+      <div class="field"><label>آدرس عمومی سایت</label><input id="setPublicUrl" placeholder="https://app.taxiranico.ir"></div>
+      <h3 style="margin-top:22px">اتصال دیتابیس</h3>
+      <div style="color:var(--muted);font-size:11.5px;margin-bottom:10px">تغییر این مقادیر بلافاصله اعمال می‌شود. قبل از ذخیره، اتصال با اطلاعات جدید تست می‌شود.</div>
+      <div class="field"><label>DB Host</label><input id="setDbHost"></div>
+      <div class="field"><label>نام دیتابیس</label><input id="setDbName"></div>
+      <div class="field"><label>یوزرنیم دیتابیس</label><input id="setDbUser"></div>
+      <div class="field"><label>پسورد دیتابیس (خالی=بدون تغییر)</label><input id="setDbPass" type="password" placeholder="●●●●●●●●"></div>
+      <button class="btn" onclick="saveSettings()">ذخیرهٔ تنظیمات دیتابیس</button>
+    </div>`;
+  // تنظیمات قدیمی این فایل به صورت کارت‌های جداگانه تولید می‌شود؛ آن‌ها را در دسته‌های تب‌محور قرار می‌دهیم تا هنگام ورود، فقط یک دسته دیده شود.
+  const settingPanels = Array.from(main.querySelectorAll('.panel')).filter(el => !el.closest('.settingsQuickLinks'));
+  const groups = [
+    {key:'branding',title:'🎨 هویت بصری',test:p=>p.textContent.includes('برندینگ سایت')},
+    {key:'basics',title:'🎓 اطلاعات پایه',test:p=>p.textContent.includes('مقاطع تحصیلی')},
+    {key:'access',title:'🔐 دسترسی و امنیت',test:p=>p.textContent.includes('دسترسی نمایندگان')},
+    {key:'pricing',title:'💰 تعرفه سرویس',test:p=>p.textContent.includes('محاسبه ارزش‌گذاری')},
+    {key:'map',title:'🗺️ نقشه',test:p=>p.textContent.trim().startsWith('نقشه')},
+    {key:'messaging',title:'📨 پیام‌رسانی و پیامک',test:p=>p.textContent.includes('پیامک')},
+    {key:'system',title:'⚙️ تنظیمات فنی',test:p=>p.textContent.includes('آدرس دامنه') || p.textContent.includes('اتصال دیتابیس')}
+  ];
+  const buckets={}; groups.forEach(g=>buckets[g.key]=[]);
+  settingPanels.forEach(p=>{ const g=groups.find(x=>x.test(p)); if(g) buckets[g.key].push(p); });
+  if(settingPanels.length){
+    const host=document.createElement('div'); host.className='legacySettingsWrap';
+    const nav=document.createElement('div'); nav.className='legacySettingsNav';
+    const pane=document.createElement('div'); pane.className='legacySettingsPane';
+    groups.forEach((g,i)=>{ const b=document.createElement('button'); b.className='btn '+(i?'secondary':''); b.textContent=g.title; b.onclick=()=>{ groups.forEach(x=>{const sec=document.querySelector('[data-legacy-section="'+x.key+'"]'); if(sec)sec.classList.toggle('active',x.key===g.key)}); nav.querySelectorAll('button').forEach(x=>x.classList.toggle('secondary',x!==b)); }; nav.appendChild(b); const sec=document.createElement('div'); sec.className='legacySettingsSection'+(i===0?' active':''); sec.dataset.legacySection=g.key; buckets[g.key].forEach(p=>sec.appendChild(p)); pane.appendChild(sec); });
+    host.appendChild(nav); host.appendChild(pane); settingPanels[0].parentNode.insertBefore(host, settingPanels[0]); settingPanels.forEach(p=>p.remove());
+  }
+  try {
+    const ac = await api('/app-config');
+    setVal('setSiteTitle', ac.site_title || ''); setVal('setHeaderSubtitle', ac.header_subtitle || '');
+    document.getElementById('setRepCanViewList').checked = !!ac.rep_can_view_school_list;
+    if (ac.logo_url) document.getElementById('curLogoPreview').src = ac.logo_url;
+  } catch (e) {}
+  await loadLevelsList();
+  await loadServicePricingAdmin();
+  try {
+    const sc = await api('/admin/sms-config');
+    document.getElementById('setSmsEnabled').checked = !!sc.enabled;
+    setVal('setSmsUser', sc.username || ''); setVal('setSmsLine', sc.line || '');
+  } catch (e) {}
+  try {
+    const mc = await api('/map-config');
+    setVal('setMapProvider', mc.provider || 'osm');
+    setVal('setNeshanMapKey', mc.neshan_map_key || '');
+    setVal('setNeshanApiKey', mc.neshan_api_key || '');
+    setVal('setGoogleKey', mc.google_maps_api_key || '');
+  } catch (e) {}
+  try {
+    const s = await api('/admin/settings');
+    setVal('setPublicUrl', s.public_url || '');
+    setVal('setDbHost', s.db_host || '');
+    setVal('setDbName', s.db_name || '');
+    setVal('setDbUser', s.db_user || '');
+  } catch (e) { toast(e.message, true); }
+}
+async function loadLevelsList() {
+  const wrap = document.getElementById('levelsListWrap'); if (!wrap) return;
+  const levels = await api('/admin/education-levels'); CACHE.levels = levels.filter((l) => l.is_active);
+  wrap.innerHTML = levels.map((l) => `<div class="userRow">
+    <span>${esc(l.title)} ${l.is_active ? '' : '<span class="badge pending">غیرفعال</span>'}</span>
+    <span><button class="btn secondary sm" onclick="toggleLevel(${l.id}, ${l.is_active ? 0 : 1})">${l.is_active ? 'غیرفعال‌سازی' : 'فعال‌سازی'}</button>
+    <button class="btn danger sm" onclick="deleteLevel(${l.id})">حذف</button></span></div>`).join('') || '<div style="color:var(--muted);font-size:12px">مقطعی ثبت نشده</div>';
+}
+async function addLevel() {
+  const title = document.getElementById('newLevelTitle').value.trim(); if (!title) return;
+  try { await api('/admin/education-levels', { method: 'POST', body: { title } }); document.getElementById('newLevelTitle').value = ''; toast('اضافه شد'); loadLevelsList(); }
+  catch (e) { toast(e.message, true); }
+}
+async function toggleLevel(id, val) {
+  try { await api('/admin/education-levels/' + id, { method: 'PUT', body: { title: CACHE.levels.find((l) => l.id === id)?.title || '', is_active: val } }); loadLevelsList(); }
+  catch (e) { toast(e.message, true); }
+}
+async function deleteLevel(id) {
+  if (!confirm('حذف این مقطع؟')) return;
+  try { await api('/admin/education-levels/' + id, { method: 'DELETE' }); toast('حذف شد'); loadLevelsList(); }
+  catch (e) { toast(e.message, true); }
+}
+async function uploadLogo(input) {
+  const file = input.files[0]; if (!file) return;
+  const fd = new FormData(); fd.append('logo', file);
+  try { const r = await api('/admin/app-config/logo', { method: 'POST', body: fd }); document.getElementById('curLogoPreview').src = r.logo_url; toast('لوگو بروزرسانی شد'); }
+  catch (e) { toast(e.message, true); }
+  input.value = '';
+}
+async function saveAppConfig() {
+  const body = {
+    site_title: document.getElementById('setSiteTitle').value.trim(),
+    header_subtitle: document.getElementById('setHeaderSubtitle').value.trim(),
+    rep_can_view_school_list: document.getElementById('setRepCanViewList').checked,
+  };
+  try { await api('/admin/app-config', { method: 'PUT', body }); toast('ذخیره شد'); refreshLookups(); }
+  catch (e) { toast(e.message, true); }
+}
+async function saveSmsConfig() {
+  const body = {
+    enabled: document.getElementById('setSmsEnabled').checked,
+    username: document.getElementById('setSmsUser').value.trim(),
+    line: document.getElementById('setSmsLine').value.trim(),
+  };
+  const pass = document.getElementById('setSmsPass').value; if (pass) body.password = pass;
+  try { await api('/admin/sms-config', { method: 'PUT', body }); toast('ذخیره شد'); document.getElementById('setSmsPass').value = ''; }
+  catch (e) { toast(e.message, true); }
+}
+
+let ADMIN_PRICING = { mode:'excel', vehicle_classes:[], rates:{}, excel_valuation:{classes:[]} };
+async function loadServicePricingAdmin(){
+  try{ ADMIN_PRICING=await api('/admin/service-pricing'); }catch(e){ ADMIN_PRICING={mode:'excel',vehicle_classes:[],rates:{},excel_valuation:{classes:[]}}; }
+  const modeEl=document.getElementById('servicePricingMode'); if(modeEl) modeEl.value=ADMIN_PRICING.mode||'excel'; togglePricingMode(); renderServicePricingAdmin();
+}
+function togglePricingMode(){
+  const mode=document.getElementById('servicePricingMode')?.value||ADMIN_PRICING.mode||'excel'; ADMIN_PRICING.mode=mode;
+  const editor=document.getElementById('mapPricingEditor'), info=document.getElementById('excelPricingInfo'); if(editor) editor.style.display=mode==='map'?'block':'none';
+  if(info){if(mode==='excel'){const v=ADMIN_PRICING.excel_valuation||{};const names=(v.classes||[]).map(x=>x.title).join('، ');info.innerHTML='منبع: <b>'+esc(v.source||'فایل ارزش‌گذاری سامانه')+'</b> — سال: <b>'+esc(v.year||'')+'</b> — مبنای مسافت: <b>'+esc(v.distance_basis||'رفت و برگشت')+'</b><br>کلاس‌ها: '+esc(names||'در فایل یافت نشد')+'<br>نواحی ۲،۵،۷ ضریب ترافیک ۱۰٪ و نواحی ۳،۴،۶ ضریب ۲۵٪ دارند.';}else info.textContent='در این حالت فاصله مسیر نشان محاسبه می‌شود و نرخ تنظیم‌شده هر کیلومتر برای ناحیه و کلاس خودرو اعمال خواهد شد.';}
+}
+function renderServicePricingAdmin(){
+  const list=document.getElementById('pricingVehicleList'),wrap=document.getElementById('pricingRatesWrap');if(!list||!wrap)return;const vehicles=ADMIN_PRICING.vehicle_classes||[];
+  list.innerHTML=vehicles.map(v=>`<div class="userRow"><span>${esc(v.title)} <small style="color:var(--muted)">${esc(v.key)}</small></span><button class="btn danger sm" onclick="removeVehicleClass('${esc(v.key).replace(/'/g,"\'")}')">حذف</button></div>`).join('')||'<div style="font-size:12px;color:var(--muted)">کلاس خودرویی ثبت نشده است.</div>';
+  const districts=CACHE.districts||[];if(!districts.length||!vehicles.length){wrap.innerHTML='<div style="font-size:12px;color:var(--muted)">برای تعریف نرخ، حداقل یک ناحیه و یک کلاس خودرو لازم است.</div>';return;}
+  wrap.innerHTML=`<table><thead><tr><th>ناحیه</th>${vehicles.map(v=>`<th>${esc(v.title)}<br><small>تومان/کیلومتر</small></th>`).join('')}</tr></thead><tbody>${districts.map(d=>`<tr><td>${esc(d.title)}</td>${vehicles.map(v=>{const val=((ADMIN_PRICING.rates||{})[d.id]||{})[v.key]||'';return `<td><input type="number" min="0" data-district="${d.id}" data-vehicle="${esc(v.key)}" class="pricingRateInput" value="${esc(val)}" style="width:130px"></td>`;}).join('')}</tr>`).join('')}</tbody></table>`;
+}
+function addVehicleClassRow(){const key=(document.getElementById('newVehicleKey').value||'').trim().replace(/\s+/g,'_'),title=(document.getElementById('newVehicleTitle').value||'').trim();if(!key||!title)return toast('کد و عنوان کلاس خودرو را وارد کنید.',true);if(!/^[A-Za-z0-9_\-]+$/.test(key))return toast('کد کلاس فقط انگلیسی، عدد، خط تیره یا زیرخط باشد.',true);if((ADMIN_PRICING.vehicle_classes||[]).some(v=>v.key===key))return toast('این کلاس خودرو قبلاً ثبت شده است.',true);ADMIN_PRICING.vehicle_classes.push({key,title});document.getElementById('newVehicleKey').value='';document.getElementById('newVehicleTitle').value='';renderServicePricingAdmin();}
+function removeVehicleClass(key){ADMIN_PRICING.vehicle_classes=(ADMIN_PRICING.vehicle_classes||[]).filter(v=>v.key!==key);Object.keys(ADMIN_PRICING.rates||{}).forEach(d=>{if(ADMIN_PRICING.rates[d])delete ADMIN_PRICING.rates[d][key];});renderServicePricingAdmin();}
+async function saveServicePricing(){const rates={};document.querySelectorAll('.pricingRateInput').forEach(inp=>{const d=inp.dataset.district,v=inp.dataset.vehicle,val=Number(inp.value||0);if(!rates[d])rates[d]={};rates[d][v]=val;});ADMIN_PRICING.rates=rates;ADMIN_PRICING.mode=document.getElementById('servicePricingMode')?.value||ADMIN_PRICING.mode||'excel';try{await api('/admin/service-pricing',{method:'PUT',body:ADMIN_PRICING});toast('روش ارزش‌گذاری ذخیره شد.');}catch(e){toast(e.message,true);}}
+
+async function saveMapConfig() {
+  const body = {
+    provider: document.getElementById('setMapProvider').value,
+    neshan_map_key: document.getElementById('setNeshanMapKey').value.trim(),
+    neshan_api_key: document.getElementById('setNeshanApiKey').value.trim(),
+    google_maps_api_key: document.getElementById('setGoogleKey').value.trim(),
+  };
+  try { await api('/admin/map-config', { method: 'PUT', body }); toast('تنظیمات نقشه ذخیره شد'); refreshLookups(); }
+  catch (e) { toast(e.message, true); }
+}
+async function saveSettings() {
+  const body = {
+    public_url: document.getElementById('setPublicUrl').value.trim(),
+    db_host: document.getElementById('setDbHost').value.trim(),
+    db_name: document.getElementById('setDbName').value.trim(),
+    db_user: document.getElementById('setDbUser').value.trim(),
+    db_pass: document.getElementById('setDbPass').value,
+  };
+  try { await api('/admin/settings', { method: 'PUT', body }); toast('تنظیمات ذخیره شد'); setVal('setDbPass', ''); }
+  catch (e) { toast(e.message, true); }
+}
+
+/* ==================== کاربران مدیر سایت و سطوح دسترسی ==================== */
+const ROLE_LABELS = { super_admin: 'مدیر کل (دسترسی کامل)', manager: 'کارشناس (بدون تنظیمات سامانه)', viewer: 'مشاهده‌گر (فقط خواندن)' };
+async function renderAdminUsers() {
+  const main = document.getElementById('main');
+  main.innerHTML = `<div class="pageTitle">کاربران مدیر سایت و سطوح دسترسی</div>
+    <div class="toolbar"><div class="spacer"></div><button class="btn" onclick="openAdminUserModal()">+ کاربر جدید</button></div>
+    <div class="panel"><div id="adminUsersTbl">در حال بارگذاری...</div></div>
+    <div class="panel" style="font-size:12px;color:var(--muted);line-height:2">
+      <b style="color:var(--ink)">توضیح سطوح دسترسی:</b><br>
+      • <b>مدیر کل:</b> دسترسی کامل به همه‌چیز، شامل تنظیمات سامانه و مدیریت سایر کاربران مدیر.<br>
+      • <b>کارشناس:</b> می‌تواند نواحی، شرکت‌ها، نمایندگان و مدارس را مدیریت و گزارش‌گیری کند، اما به تنظیمات سامانه و مدیریت کاربران مدیر دسترسی ندارد.<br>
+      • <b>مشاهده‌گر:</b> فقط امکان مشاهدهٔ داشبورد، لیست‌ها و گزارش‌ها را دارد و نمی‌تواند تغییری ثبت کند.
+    </div>`;
+  const rows = await api('/admin/admin-users');
+  document.getElementById('adminUsersTbl').innerHTML = `<table><thead><tr><th>نام کامل</th><th>نام کاربری</th><th>سطح دسترسی</th><th>وضعیت</th><th></th></tr></thead><tbody>
+    ${rows.map((r) => `<tr>
+      <td>${esc(r.full_name)}</td><td>${esc(r.username)}</td><td>${esc(ROLE_LABELS[r.role] || r.role)}</td>
+      <td>${r.is_active ? '<span class="badge done">فعال</span>' : '<span class="badge pending">غیرفعال</span>'}</td>
+      <td>
+        <button class="btn secondary sm" onclick='openAdminUserModal(${JSON.stringify(r)})'>ویرایش</button>
+        ${r.id !== ME.id ? `<button class="btn danger sm" onclick="deleteAdminUser(${r.id})">حذف</button>` : '<span style="color:var(--muted);font-size:11px">(حساب شما)</span>'}
+      </td>
+    </tr>`).join('') || '<tr><td colspan=5>کاربری ثبت نشده</td></tr>'}
+  </tbody></table>`;
+}
+function openAdminUserModal(r) {
+  showModal(`<h3>${r ? 'ویرایش کاربر' : 'کاربر مدیر جدید'}</h3>
+    ${r ? '' : `<div class="field"><label>نام کاربری</label><input id="mUsername"></div>`}
+    <div class="field"><label>نام کامل</label><input id="mFullName" value="${r ? esc(r.full_name) : ''}"></div>
+    <div class="field"><label>سطح دسترسی</label><select id="mRole">
+      ${Object.entries(ROLE_LABELS).map(([v, l]) => `<option value="${v}" ${r && r.role === v ? 'selected' : ''}>${l}</option>`).join('')}
+    </select></div>
+    <div class="field"><label>${r ? 'رمز عبور جدید (خالی = بدون تغییر)' : 'رمز عبور'}</label><input id="mPassword" type="text"></div>
+    ${r ? `<div class="field"><label><input type="checkbox" id="mActive" ${r.is_active ? 'checked' : ''}> فعال</label></div>` : ''}
+    <div class="modalActions"><button class="btn secondary" onclick="closeModal()">انصراف</button><button class="btn" onclick="saveAdminUser(${r ? r.id : 'null'})">ذخیره</button></div>`);
+}
+async function saveAdminUser(id) {
+  const body = { full_name: document.getElementById('mFullName').value.trim(), role: document.getElementById('mRole').value };
+  const pw = document.getElementById('mPassword').value;
+  if (pw) body.password = pw;
+  if (document.getElementById('mActive')) body.is_active = document.getElementById('mActive').checked;
+  try {
+    if (id) { await api('/admin/admin-users/' + id, { method: 'PUT', body }); }
+    else {
+      body.username = document.getElementById('mUsername').value.trim();
+      if (!body.username || !pw || !body.full_name) return toast('نام کاربری، رمز عبور و نام کامل الزامی است', true);
+      await api('/admin/admin-users', { method: 'POST', body });
+    }
+    closeModal(); toast('ذخیره شد'); renderAdminUsers();
+  } catch (e) { toast(e.message, true); }
+}
+async function deleteAdminUser(id) {
+  if (!confirm('حذف این کاربر مدیر؟')) return;
+  try { await api('/admin/admin-users/' + id, { method: 'DELETE' }); toast('حذف شد'); renderAdminUsers(); }
+  catch (e) { toast(e.message, true); }
+}
+
+/* ==================== آیتم‌های سفارشیِ مشخصات مدرسه ==================== */
+const FIELD_TYPE_LABELS = { text: 'متن', number: 'عدد', select: 'انتخابی', checkbox: 'بله/خیر', date: 'تاریخ' };
+async function renderSchoolFields() {
+  const main = document.getElementById('main');
+  main.innerHTML = `<div class="pageTitle">آیتم‌های مشخصات مدرسه</div>
+    <div class="panel">
+      <h3>فیلدهای پیش‌فرض سامانه</h3>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px">این فیلدها بخشی از ساختار اصلی سامانه‌اند و حذف نمی‌شوند، اما می‌توانید عنوان نمایشی آن‌ها را ویرایش یا مشخص کنید کدام‌ها در اپ نمایندگان قابل‌ویرایش باشند.</div>
+      <div id="builtinFieldsTbl">در حال بارگذاری...</div>
+    </div>
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <h3 style="margin:0">آیتم‌های سفارشی (قابل افزودن/حذف)</h3>
+        <button class="btn sm" onclick="openSchoolFieldModal()">+ آیتم جدید</button>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px">هر آیتم دلخواه دیگری را همین‌جا اضافه یا حذف کنید. اگر «قابل‌ویرایش توسط نماینده» را فعال کنید، آن آیتم در اپ نمایندگان هم قابل‌ثبت خواهد بود.</div>
+      <div id="schoolFieldsTbl">در حال بارگذاری...</div>
+    </div>`;
+
+  const builtins = await api('/school-builtin-fields');
+  document.getElementById('builtinFieldsTbl').innerHTML = `<table><thead><tr><th>عنوان نمایشی</th><th>قابل‌ویرایش توسط نماینده</th><th></th></tr></thead><tbody>
+    ${builtins.map((f) => `<tr>
+      <td><input id="bf_label_${f.field_key}" value="${esc(f.label)}" style="width:100%;max-width:260px"></td>
+      <td><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="bf_edit_${f.field_key}" ${f.editable_by_rep ? 'checked' : ''}> قابل‌ویرایش</label></td>
+      <td></td>
+    </tr>`).join('')}
+  </tbody></table>
+  <button class="btn secondary sm" style="margin-top:10px" onclick="saveBuiltinFields()">ذخیرهٔ فیلدهای پیش‌فرض</button>`;
+  window.__builtinFieldKeys = builtins.map((f) => f.field_key);
+
+  const rows = await api('/admin/school-field-defs');
+  document.getElementById('schoolFieldsTbl').innerHTML = `<table><thead><tr><th>عنوان</th><th>نوع</th><th>گزینه‌ها</th><th>قابل‌ویرایش توسط نماینده</th><th>وضعیت</th><th></th></tr></thead><tbody>
+    ${rows.map((f) => `<tr>
+      <td>${esc(f.label)}</td><td>${FIELD_TYPE_LABELS[f.field_type] || f.field_type}</td><td>${esc(f.options || '—')}</td>
+      <td>${f.editable_by_rep ? '✅' : '—'}</td>
+      <td>${f.is_active ? '<span class="badge done">فعال</span>' : '<span class="badge pending">غیرفعال</span>'}</td>
+      <td><button class="btn secondary sm" onclick='openSchoolFieldModal(${JSON.stringify(f)})'>ویرایش</button>
+          <button class="btn danger sm" onclick="deleteSchoolField(${f.id})">حذف</button></td>
+    </tr>`).join('') || '<tr><td colspan=6>آیتمی ثبت نشده</td></tr>'}
+  </tbody></table>`;
+}
+async function saveBuiltinFields() {
+  const fields = {};
+  (window.__builtinFieldKeys || []).forEach((key) => {
+    fields[key] = { label: document.getElementById('bf_label_' + key).value.trim(), editable_by_rep: document.getElementById('bf_edit_' + key).checked };
+  });
+  try { await api('/admin/school-builtin-fields', { method: 'PUT', body: { fields } }); toast('ذخیره شد'); }
+  catch (e) { toast(e.message, true); }
+}
+function openSchoolFieldModal(f) {
+  showModal(`<h3>${f ? 'ویرایش آیتم' : 'آیتم جدید'}</h3>
+    <div class="field"><label>عنوان نمایشی</label><input id="mLabel" value="${f ? esc(f.label) : ''}"></div>
+    <div class="field"><label>نوع فیلد</label><select id="mFieldType" onchange="document.getElementById('mOptionsWrap').classList.toggle('hidden', this.value!=='select')">
+      ${Object.entries(FIELD_TYPE_LABELS).map(([v, l]) => `<option value="${v}" ${f && f.field_type === v ? 'selected' : ''}>${l}</option>`).join('')}
+    </select></div>
+    <div class="field ${f && f.field_type === 'select' ? '' : 'hidden'}" id="mOptionsWrap"><label>گزینه‌ها (با کاما جدا کنید)</label><input id="mOptions" value="${f ? esc(f.options || '') : ''}"></div>
+    <div class="field"><label><input type="checkbox" id="mEditableByRep" ${f && f.editable_by_rep ? 'checked' : ''}> قابل‌ویرایش توسط نمایندهٔ شرکت (در اپ اندروید)</label></div>
+    ${f ? `<div class="field"><label><input type="checkbox" id="mActive" ${f.is_active ? 'checked' : ''}> فعال</label></div>` : ''}
+    <div class="modalActions"><button class="btn secondary" onclick="closeModal()">انصراف</button><button class="btn" onclick="saveSchoolField(${f ? f.id : 'null'})">ذخیره</button></div>`);
+}
+async function saveSchoolField(id) {
+  const body = {
+    label: document.getElementById('mLabel').value.trim(), field_type: document.getElementById('mFieldType').value,
+    options: document.getElementById('mOptions').value.trim(), editable_by_rep: document.getElementById('mEditableByRep').checked,
+  };
+  if (!body.label) return toast('عنوان الزامی است', true);
+  if (document.getElementById('mActive')) body.is_active = document.getElementById('mActive').checked;
+  try {
+    if (id) await api('/admin/school-field-defs/' + id, { method: 'PUT', body });
+    else await api('/admin/school-field-defs', { method: 'POST', body });
+    closeModal(); toast('ذخیره شد'); renderSchoolFields();
+  } catch (e) { toast(e.message, true); }
+}
+async function deleteSchoolField(id) {
+  if (!confirm('حذف این آیتم؟ مقادیر قبلاً ثبت‌شده برای مدارس نیز از دسترس خارج می‌شود.')) return;
+  try { await api('/admin/school-field-defs/' + id, { method: 'DELETE' }); toast('حذف شد'); renderSchoolFields(); }
+  catch (e) { toast(e.message, true); }
+}
+
+/* ==================== مودال مشترک ==================== */
+function showModal(html) { document.getElementById('modalRoot').innerHTML = `<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`; }
+function closeModal() { document.getElementById('modalRoot').innerHTML = ''; }
+
+/* ==================== شروع ==================== */
+boot();
+</script>
+<script>
+(function(){try{var vid=localStorage.getItem('site_visit_id');if(!vid){vid=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():('v_'+Date.now()+'_'+Math.random().toString(36).slice(2));localStorage.setItem('site_visit_id',vid);}fetch((typeof API!=='undefined'?API:'api')+'/public/site-visit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({visitor_id:vid,path:location.pathname||'/'}),keepalive:true}).catch(function(){});}catch(e){}})();
+</script>
+</body>
+</html>
+
+.quick-cost-monthly{
+  display:block;
+  width:100%;
+  margin:8px 0 0;
+  padding:0;
+  direction:rtl;
+  text-align:right;
+}
+
+.quick-cost-label{
+  display:block;
+  margin:0;
+  padding:0;
+  font-size:14px;
+  line-height:1.9;
+  font-weight:700;
+}
+
+.quick-cost-monthly-value{
+  display:block;
+  margin:0;
+  padding:0;
+  font-size:18px;
+  line-height:2;
+  font-weight:900;
+}
+
+.quick-cost-nine-month{
+  display:block;
+  width:100%;
+  margin:2px 0 0;
+  padding:0;
+  direction:rtl;
+  text-align:right;
+  background:transparent;
+  border:0;
+  box-shadow:none;
+}
+
+.quick-cost-nine-month-label{
+  display:block;
+  margin:0;
+  padding:0;
+  font-size:14px;
+  line-height:1.9;
+  font-weight:700;
+}
+
+.quick-cost-nine-month-value{
+  display:block;
+  margin:0;
+  padding:0;
+  font-size:18px;
+  line-height:2;
+  font-weight:900;
+}<style>
+.adminPageHeader,.settingsHero{background:linear-gradient(135deg,#ffffff 0%,#f5f8fc 72%,#fff8df 100%) !important;border:1px solid #dce5ef !important;box-shadow:0 14px 36px rgba(16,42,67,.08) !important;border-radius:22px !important;padding:22px 24px !important}
+.settingsPage .settingsWrap{background:transparent}
+.settingsPage .settingsTabs{background:#fff;border:1px solid #dfe7ef;border-radius:18px;padding:8px;box-shadow:0 8px 24px rgba(19,48,77,.05)}
+.settingsPage .settingsTabs .btn{border-radius:12px}
+</style>
