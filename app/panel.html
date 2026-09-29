@@ -15,10 +15,7 @@
 </script>
 <!-- کیت رسمی نقشهٔ نشان روی Leaflet (از CDN داخلی خودِ نشان؛ همان L.Map/L.marker معمولی را گسترش می‌دهد،
      فقط وقتی «نشان» به‌عنوان نقشه انتخاب شده استفاده می‌شود) -->
-<link rel="stylesheet" href="https://static.neshan.org/sdk/leaflet/v1.9.4/neshan-sdk/v1.0.8/index.css">
-<script src="https://static.neshan.org/sdk/leaflet/v1.9.4/neshan-sdk/v1.0.8/index.js">
-
-</script>
+<!-- Neshan SDK فقط زمانی بارگذاری می‌شود که ارائه‌دهندهٔ نقشه «نشان» و کلید معتبر تنظیم شده باشد. -->
 <script>
 /* خوداتکایی آفلاین: اگر فایل‌های کتابخانه روی هاست نبودند و اینترنت وصل بود،
    یک‌بار در پس‌زمینه از CDN روی هاست ذخیره می‌شوند تا دفعهٔ بعد حتی با کندی/قطعی
@@ -753,7 +750,7 @@ function applyPublicFeatureFlags(){
 async function bootPublic(){
   showPublic();
   try {
-    CACHE.mapConfig = await publicApi('/map-config');
+    CACHE.mapConfig = await publicApi('/map-config'); await ensureNeshanSdk(CACHE.mapConfig);
     try { CACHE.appConfig = await publicApi('/app-config'); applySessionSecurityConfig(CACHE.appConfig); applyPublicFeatureFlags(); } catch(e) {}
     const [districts, levels, pricing] = await Promise.all([publicApi('/districts'), publicApi('/education-levels'), (publicFeatureEnabled('public_cost_calculator_map') || publicFeatureEnabled('public_cost_calculator_quick')) ? publicApi('/public/service-pricing') : Promise.resolve({vehicle_classes:[],rates:{}})]);
     CALC_PRICING = pricing;
@@ -1018,7 +1015,7 @@ async function refreshLookups() {
   try {
     CACHE.districts = await api('/admin/districts');
     CACHE.companies = await api('/admin/companies');
-    CACHE.mapConfig = await api('/map-config');
+    CACHE.mapConfig = await api('/map-config'); await ensureNeshanSdk(CACHE.mapConfig);
     CACHE.levels = await api('/education-levels');
     CACHE.schoolTypes = await api('/school-types');
     CACHE.appConfig = await api('/app-config');
@@ -1032,6 +1029,32 @@ async function refreshLookups() {
 // ۱) Leaflet با کاشی OSM/گوگل   ۲) کیت رسمی نقشهٔ نشان (بر پایهٔ MapboxGL، طبق مستندات platform.neshan.org)
 // خروجی یک شیء یکسان برمی‌گرداند: { addMarker(lat,lng,popupHtml,color) }
 const __LEAFLET_MAPS = {};
+let __NESHHAN_SDK_PROMISE = null;
+function ensureNeshanSdk(cfg){
+  cfg=cfg||CACHE.mapConfig||{};
+  if(cfg.provider!=='neshan' || !cfg.neshan_map_key) return Promise.resolve(false);
+  if(window.L && window.L.Map && window.L.Map.prototype && window.L.Map.prototype._neshanReady) return Promise.resolve(true);
+  if(__NESHHAN_SDK_PROMISE) return __NESHHAN_SDK_PROMISE;
+  __NESHHAN_SDK_PROMISE=new Promise(function(resolve){
+    try{
+      if(!document.querySelector('link[data-neshan-sdk-css]')){
+        const css=document.createElement('link');
+        css.rel='stylesheet';
+        css.href='https://static.neshan.org/sdk/leaflet/v1.9.4/neshan-sdk/v1.0.8/index.css';
+        css.dataset.neshanSdkCss='1';
+        document.head.appendChild(css);
+      }
+      if(window.L && window.L.Map){
+        const script=document.createElement('script');
+        script.src='https://static.neshan.org/sdk/leaflet/v1.9.4/neshan-sdk/v1.0.8/index.js';
+        script.onload=function(){resolve(!!(window.L&&window.L.Map));};
+        script.onerror=function(){console.warn('Neshan SDK load failed; using Leaflet fallback.');resolve(false);};
+        document.head.appendChild(script);
+      }else resolve(false);
+    }catch(e){ console.warn('Neshan SDK initialization failed; using Leaflet fallback.',e); resolve(false); }
+  });
+  return __NESHHAN_SDK_PROMISE;
+}
 function createMap(containerId, { lat = 36.297, lng = 59.606, zoom = 12 } = {}) {
   const el = document.getElementById(containerId);
   if (!el) {
