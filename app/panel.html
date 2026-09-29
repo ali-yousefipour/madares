@@ -508,6 +508,7 @@ table{border-spacing:0 7px;border-collapse:separate}thead th{background:#eef3f9;
     <a class="nav-item" data-tab="companies" onclick="goTab('companies')"><span class="ic">🏢</span> <span>شرکت‌ها</span></a>
     <a class="nav-item" data-tab="schools" onclick="goTab('schools')"><span class="ic">🏫</span> <span>مدارس</span></a>
     <a class="nav-item" data-tab="reports" onclick="goTab('reports')"><span class="ic">📈</span> <span>گزارش‌ها</span></a>
+    <a class="nav-item" data-tab="analytics" onclick="goTab('analytics')"><span class="ic">📊</span> <span>تحلیل و آمار</span></a>
     <a class="nav-item" data-tab="complaints" onclick="goTab('complaints')"><span class="ic">📣</span> <span>شکایات</span></a>
     <a class="nav-item" data-tab="baleCenter" onclick="goTab('baleCenter')"><span class="ic">🤖</span> <span>بله و مشترکین</span></a>
     <a class="nav-item" data-tab="settings" onclick="goTab('settings')"><span class="ic">⚙️</span> <span>تنظیمات سامانه</span></a>
@@ -1003,9 +1004,9 @@ async function boot() {
 
 function isComplaintRole(){ return !!ME && ['complaint_agent','complaint_manager'].includes(ME.role); }
 const ROLE_TAB_ACCESS={
-  super_admin:['dashboard','siteVisits','companies','schools','reports','complaints','baleCenter','settings','districts','adminUsers','schoolFields','companyFields','companyReservations','reservationCoverage','schoolReservationStatus'],
-  manager:['dashboard','companies','schools','reports','complaints','companyReservations','reservationCoverage','schoolReservationStatus'],
-  viewer:['dashboard','companies','schools','reports','companyReservations','reservationCoverage','schoolReservationStatus'],
+  super_admin:['dashboard','siteVisits','companies','schools','reports','analytics','complaints','baleCenter','settings','districts','adminUsers','schoolFields','companyFields','companyReservations','reservationCoverage','schoolReservationStatus'],
+  manager:['dashboard','companies','schools','reports','analytics','complaints','companyReservations','reservationCoverage','schoolReservationStatus'],
+  viewer:['dashboard','companies','schools','reports','analytics','companyReservations','reservationCoverage','schoolReservationStatus'],
   complaint_agent:['complaints'],
   complaint_manager:['complaints']
 };
@@ -1114,7 +1115,7 @@ function restoreSidebarState(){
 
 
 /* ==================== ناوبری ==================== */
-const TABS = { siteVisits: renderSiteVisits, dashboard: renderDashboard, districts: renderDistricts, companies: renderCompanies, schools: renderSchools, complaints: renderComplaints, baleCenter: renderBaleCenter, reports: renderReports, settings: renderSettings, adminUsers: renderAdminUsers, schoolFields: renderSchoolFields, companyFields: renderCompanyFields, companyReservations: renderCompanyReservations, reservationCoverage: renderReservationCoverage, schoolReservationStatus: renderSchoolReservationStatus };
+const TABS = { analytics: renderAnalytics, siteVisits: renderSiteVisits, dashboard: renderDashboard, districts: renderDistricts, companies: renderCompanies, schools: renderSchools, complaints: renderComplaints, baleCenter: renderBaleCenter, reports: renderReports, settings: renderSettings, adminUsers: renderAdminUsers, schoolFields: renderSchoolFields, companyFields: renderCompanyFields, companyReservations: renderCompanyReservations, reservationCoverage: renderReservationCoverage, schoolReservationStatus: renderSchoolReservationStatus };
 let CURRENT_TAB = 'dashboard';
 async function goTab(tab) {
   if (ME && !canOpenTab(tab)) {
@@ -1136,6 +1137,7 @@ const ADMIN_PAGE_META={
   siteVisits:['📈','آمار بازدید سایت','گزارش بازدید، بازدیدکنندگان یکتا و روند مراجعه به سایت'],
   districts:['🗺️','نواحی آموزش و پرورش','مدیریت نواحی، وضعیت فعالیت و ارتباط آن‌ها با مدارس'],
   reports:['📋','گزارش‌ها','گزارش‌های مدیریتی و عملکرد شرکت‌ها و مدارس'],
+  analytics:['📊','تحلیل و آمار','تحلیل آماری مدارس، شرکت‌ها، نواحی و مقاطع تحصیلی'],
   complaints:['📣','مرکز شکایات','مدیریت پرونده‌ها، ارجاع، پاسخ‌گویی و گزارش‌های شکایات'],
   baleCenter:['🤖','بله و مشترکین','مدیریت ربات بله، مشترکین و پیام‌های سامانه'],
   adminUsers:['👤','کاربران و دسترسی‌ها','مدیریت کاربران مدیریتی، نقش‌ها و سطح دسترسی'],
@@ -1656,6 +1658,14 @@ async function openSchoolDetail(id) {
   }, 50);
 }
 
+/* ==================== تحلیل و آمار ==================== */
+let ANALYTICS_CACHE=null;
+function analyticsNum(v){return Number(v||0).toLocaleString('fa-IR');}
+function analyticsBar(rows,labelKey,valueKey){if(!rows||!rows.length)return '<div style="color:var(--muted);padding:12px">داده‌ای وجود ندارد.</div>';const max=Math.max(1,...rows.map(x=>Number(x[valueKey]||0)));return rows.map(x=>{const val=Number(x[valueKey]||0),pct=Math.max(2,Math.round(val/max*100));return '<div style="margin:10px 0"><div style="display:flex;justify-content:space-between;font-size:12px"><b>'+esc(x[labelKey]||'نامشخص')+'</b><span>'+analyticsNum(val)+'</span></div><div style="height:9px;background:#eef1f5;border-radius:99px;overflow:hidden;margin-top:5px"><div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,var(--gold),var(--gold-2));border-radius:99px"></div></div></div>';}).join('');}
+async function renderAnalytics(){const main=document.getElementById('main');main.innerHTML='<div class="panel">در حال بارگذاری تحلیل آماری...</div>';try{const d=ANALYTICS_CACHE=await api('/admin/analytics');main.innerHTML='<div class="grid stats"><div class="statCard"><div class="v">'+analyticsNum(d.summary.total_schools)+'</div><div class="l">مدارس</div></div><div class="statCard"><div class="v">'+analyticsNum(d.summary.total_companies)+'</div><div class="l">شرکت‌ها</div></div><div class="statCard"><div class="v">'+analyticsNum(d.summary.total_districts)+'</div><div class="l">نواحی</div></div><div class="statCard dark"><div class="v">'+analyticsNum(d.summary.total_students)+'</div><div class="l">دانش‌آموزان</div></div></div><div class="grid" style="grid-template-columns:1fr 1fr;gap:16px"><div class="panel"><h3>تعداد مدارس هر ناحیه</h3>'+analyticsBar(d.by_district,'district_title','school_count')+'</div><div class="panel"><h3>تعداد مدارس تحت نظارت هر شرکت</h3>'+analyticsBar(d.by_company,'company_title','school_count')+'</div></div><div class="grid" style="grid-template-columns:1fr 1fr;gap:16px"><div class="panel"><h3>توزیع مدارس بر اساس مقطع</h3>'+analyticsBar(d.by_level,'level','school_count')+'</div><div class="panel"><h3>تحلیل یک شرکت</h3><div class="toolbar"><select id="analyticsCompany" style="min-width:260px"><option value="">انتخاب شرکت</option>'+d.by_company.map(c=>'<option value="'+c.company_id+'">'+esc(c.company_title||'بدون شرکت')+'</option>').join('')+'</select><button class="btn secondary" onclick="loadAnalyticsCompany()">نمایش</button></div><div id="analyticsCompanyBody">یک شرکت را انتخاب کنید.</div></div></div><div class="panel"><div class="toolbar"><b>فهرست تجمیعی مدارس</b><span class="spacer"></span><input id="analyticsQ" placeholder="جستجوی نام یا کد" oninput="filterAnalyticsSchools()"><select id="analyticsDistrict" onchange="filterAnalyticsSchools()"><option value="">همه نواحی</option>'+d.by_district.map(x=>'<option value="'+x.district_id+'">'+esc(x.district_title)+'</option>').join('')+'</select></div><div id="analyticsSchoolsTable"></div></div>';renderAnalyticsSchools(d.schools||[]);}catch(e){main.innerHTML='<div class="panel"><b>خطا در بارگذاری تحلیل</b><div style="color:var(--danger)">'+esc(e.message)+'</div></div>';}}
+function renderAnalyticsSchools(rows){window.__analyticsSchools=rows||[];const q=(document.getElementById('analyticsQ')?.value||'').trim().toLowerCase(),district=document.getElementById('analyticsDistrict')?.value||'';const a=window.__analyticsSchools.filter(s=>(!q||String(s.name||'').toLowerCase().includes(q)||String(s.code||'').toLowerCase().includes(q))&&(!district||String(s.district_id)===String(district)));document.getElementById('analyticsSchoolsTable').innerHTML='<div style="overflow:auto"><table><thead><tr><th>کد</th><th>مدرسه</th><th>ناحیه</th><th>مقطع</th><th>دانش‌آموز</th><th>شرکت</th></tr></thead><tbody>'+a.map(s=>'<tr><td>'+esc(s.code||'—')+'</td><td>'+esc(s.name||'—')+'</td><td>'+esc(s.district_title||'—')+'</td><td>'+esc(s.level||'—')+'</td><td>'+analyticsNum(s.student_count)+'</td><td>'+esc(s.company_title||'بدون شرکت')+'</td></tr>').join('')+'</tbody></table></div><div style="color:var(--muted);font-size:11px;margin-top:8px">تعداد نمایش: '+analyticsNum(a.length)+'</div>';}
+function filterAnalyticsSchools(){renderAnalyticsSchools(window.__analyticsSchools||[]);}
+async function loadAnalyticsCompany(){const id=document.getElementById('analyticsCompany')?.value,box=document.getElementById('analyticsCompanyBody');if(!id){box.innerHTML='یک شرکت را انتخاب کنید.';return;}box.innerHTML='در حال بارگذاری...';try{const d=await api('/admin/analytics/company/'+id);box.innerHTML='<div class="grid stats" style="grid-template-columns:repeat(3,1fr)"><div class="statCard"><div class="v">'+analyticsNum(d.summary.school_count)+'</div><div class="l">مدرسه</div></div><div class="statCard"><div class="v">'+analyticsNum(d.summary.student_count)+'</div><div class="l">دانش‌آموز</div></div><div class="statCard"><div class="v">'+analyticsNum(d.summary.district_count)+'</div><div class="l">ناحیه</div></div></div><div style="max-height:300px;overflow:auto"><table><thead><tr><th>مدرسه</th><th>ناحیه</th><th>مقطع</th><th>دانش‌آموز</th></tr></thead><tbody>'+d.schools.map(s=>'<tr><td>'+esc(s.name)+'</td><td>'+esc(s.district_title||'—')+'</td><td>'+esc(s.level||'—')+'</td><td>'+analyticsNum(s.student_count)+'</td></tr>').join('')+'</tbody></table></div>';}catch(e){box.innerHTML='<span style="color:var(--danger)">'+esc(e.message)+'</span>';}}
 /* ==================== گزارش‌ها ==================== */
 async function renderReports() {
   const main = document.getElementById('main');
