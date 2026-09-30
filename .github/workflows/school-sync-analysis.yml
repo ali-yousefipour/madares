@@ -1,0 +1,23 @@
+name: school-sync-analysis
+on:
+  push:
+    branches: [main]
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq mariadb-server php-cli php-mysql php-zip
+          sudo service mariadb start
+          sudo mysql -e "CREATE DATABASE school_sync CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+          sudo mysql school_sync < h301194_school.sql
+          printf '%s\n' '<?php return [' "'db_host' => '127.0.0.1', 'db_name' => 'school_sync', 'db_user' => 'root', 'db_pass' => ''];" '];' > config.php
+          php tools/generate_school_sync_sql.php
+      - uses: actions/upload-artifact@v4
+        with:
+          name: school-sync-result
+          path: |
+            school_sync.sql
+            school_sync_audit.csv
