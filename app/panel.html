@@ -1510,16 +1510,17 @@ async function loadSchools() {
   let data;
   try { data = await api('/admin/schools?' + qs.toString()); } catch (e) { toast(e.message, true); return; }
   document.getElementById('schoolHeaderCount') && (document.getElementById('schoolHeaderCount').textContent = Number(data.total ?? data.items?.length ?? 0).toLocaleString('fa-IR'));
-  document.getElementById('schoolsTbl').innerHTML = `<table><thead><tr><th>کد</th><th>نام مدرسه</th><th>ناحیه</th><th>شرکت</th><th>وضعیت</th><th>ثبت‌کننده</th><th></th></tr></thead><tbody>
+  document.getElementById('schoolsTbl').innerHTML = `<table><thead><tr><th>کد</th><th>نام مدرسه</th><th>ناحیه</th><th>شرکت</th><th>فعالیت</th><th>وضعیت موقعیت</th><th>ثبت‌کننده</th><th></th></tr></thead><tbody>
     ${data.items.map((s) => `<tr>
       <td>${esc(s.code)}</td><td>${esc(s.name)}</td><td>${esc(s.district_title || '—')}</td><td>${esc(s.company_title || '—')}</td>
+      <td>${s.is_active ? '<span class="badge done">فعال</span>' : '<span class="badge pending">غیرفعال</span>'}</td>
       <td>${s.location_status === 'done' ? '<span class="badge done">ثبت‌شده</span>' : '<span class="badge pending">باقی‌مانده</span>'}</td>
       <td>${esc(s.editor_name || '—')}</td>
       <td><button class="btn secondary sm" onclick="toggleSchoolActive(${s.id}, ${s.is_active ? 0 : 1})">${s.is_active ? 'غیرفعال‌سازی مدرسه' : 'فعال‌سازی مدرسه'}</button> <button class="btn secondary sm" onclick="openSchoolDetail(${s.id})">مشاهده/ویرایش</button>
           <button class="btn secondary sm" onclick="viewSchoolImage(${s.id})">مشاهده تصویر مدرسه</button>
           ${s.lat ? `<button class="btn secondary sm" onclick="showSchoolOnMap(${s.id}, ${s.lat}, ${s.lng}, '${esc(s.name).replace(/'/g, "\\'")}')">نمایش در نقشه</button>` : ''}
           <button class="btn danger sm" onclick="deleteSchool(${s.id})">حذف</button></td>
-    </tr>`).join('') || '<tr><td colspan=7>مدرسه‌ای یافت نشد</td></tr>'}
+    </tr>`).join('') || '<tr><td colspan=8>مدرسه‌ای یافت نشد</td></tr>'}
   </tbody></table>`;
   const pager = document.getElementById('schoolsPager'); pager.innerHTML = '';
   for (let i = 1; i <= data.pages; i++) {
