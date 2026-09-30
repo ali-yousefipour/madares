@@ -1023,10 +1023,10 @@ function renderSettings() {
   const groups = [
     {key:'branding',title:'🎨 هویت بصری',test:p=>p.textContent.includes('برندینگ سایت')},
     {key:'basics',title:'🎓 اطلاعات پایه',test:p=>p.textContent.includes('مقاطع تحصیلی')},
-    {key:'access',title:'🔐 دسترسی و امنیت',test:p=>p.textContent.includes('دسترسی نمایندگان')},
-    {key:'pricing',title:'💰 تعرفه سرویس',test:p=>p.textContent.includes('محاسبه ارزش‌گذاری')},
+    {key:'access',title:'🔐 دسترسی، امنیت و قابلیت‌ها',test:p=>p.textContent.includes('دسترسی نمایندگان') || p.textContent.includes('مدیریت کاربران و تعیین سطح دسترسی')},
+    {key:'pricing',title:'💰 تعرفهٔ هزینهٔ سرویس',test:p=>p.textContent.includes('محاسبه ارزش‌گذاری')},
     {key:'map',title:'🗺️ نقشه',test:p=>p.textContent.trim().startsWith('نقشه')},
-    {key:'messaging',title:'📨 پیام‌رسانی و پیامک',test:p=>p.textContent.includes('پیامک')},
+    {key:'messaging',title:'📨 پیام‌رسانی و اطلاع‌رسانی',test:p=>p.textContent.includes('پیامک')},
     {key:'system',title:'⚙️ تنظیمات فنی',test:p=>p.textContent.includes('آدرس دامنه') || p.textContent.includes('اتصال دیتابیس')}
   ];
   const buckets={}; groups.forEach(g=>buckets[g.key]=[]);
