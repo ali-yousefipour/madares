@@ -1495,14 +1495,14 @@ let SCHOOL_PAGE = 1, SCHOOL_FILTERS = {};
 async function renderSchools() {
   const main = document.getElementById('main');
   main.innerHTML = `<div class="adminPageHeader"><div><h1 class="adminPageTitle">مدارس</h1><p>مدیریت اطلاعات مدارس، جستجو، فیلتر، ایمپورت و تهیه گزارش‌های Excel</p></div><div class="adminPageStats"><div class="miniStat"><b id="schoolHeaderCount">—</b><span>نتیجه جاری</span></div><div class="miniStat"><b>${Number(CACHE.districts?.length||0).toLocaleString('fa-IR')}</b><span>ناحیه</span></div></div></div>
-    <div class="adminPageToolbar"><div class="toolbarGroup"><input id="fQ" placeholder="🔎 جستجوی نام یا کد مدرسه" oninput="debounceSearch()"><select id="fDistrict" onchange="applyFilters()"><option value="">همهٔ نواحی</option>${CACHE.districts.map((d) => `<option value="${d.id}">${esc(d.title)}</option>`).join('')}</select><select id="fCompany" onchange="applyFilters()"><option value="">همهٔ شرکت‌ها</option>${CACHE.companies.map((c) => `<option value="${c.id}">${esc(c.title)}</option>`).join('')}</select><select id="fStatus" onchange="applyFilters()"><option value="">همهٔ وضعیت‌ها</option><option value="done">ثبت‌شده</option><option value="pending">باقی‌مانده</option></select></div><div class="toolbarDivider"></div><div class="toolbarGroup"><select id="schoolExportFormat" title="نوع خروجی"><option value="full">Excel کامل</option><option value="summary">Excel خلاصه</option><option value="contact">Excel اطلاعات تماس</option></select><button class="btn exportAction" onclick="exportSchools()">📊 خروجی Excel</button><button class="btn filterAction" onclick="downloadSchoolTemplate()">📥 نمونه Excel</button><button class="btn filterAction" onclick="document.getElementById('importFile').click()">📤 ایمپورت</button><input type="file" id="importFile" accept=".xlsx" class="hidden" onchange="importSchools(this)"><span class="spacer"></span><button class="btn primaryAction" onclick="openSchoolModal()">＋ مدرسه جدید</button></div></div>
+    <div class="adminPageToolbar"><div class="toolbarGroup"><input id="fQ" placeholder="🔎 جستجوی نام یا کد مدرسه" oninput="debounceSearch()"><select id="fDistrict" onchange="applyFilters()"><option value="">همهٔ نواحی</option>${CACHE.districts.map((d) => `<option value="${d.id}">${esc(d.title)}</option>`).join('')}</select><select id="fCompany" onchange="applyFilters()"><option value="">همهٔ شرکت‌ها</option>${CACHE.companies.map((c) => `<option value="${c.id}">${esc(c.title)}</option>`).join('')}</select><select id="fActivity" onchange="applyFilters()"><option value="">همهٔ وضعیت فعالیت</option><option value="1">فعال</option><option value="0">غیرفعال</option></select><select id="fStatus" onchange="applyFilters()"><option value="">همهٔ وضعیت ثبت موقعیت</option><option value="done">ثبت‌شده</option><option value="pending">باقی‌مانده</option></select></div><div class="toolbarDivider"></div><div class="toolbarGroup"><select id="schoolExportFormat" title="نوع خروجی"><option value="full">Excel کامل</option><option value="summary">Excel خلاصه</option><option value="contact">Excel اطلاعات تماس</option></select><button class="btn exportAction" onclick="exportSchools()">📊 خروجی Excel</button><button class="btn filterAction" onclick="downloadSchoolTemplate()">📥 نمونه Excel</button><button class="btn filterAction" onclick="document.getElementById('importFile').click()">📤 ایمپورت</button><input type="file" id="importFile" accept=".xlsx" class="hidden" onchange="importSchools(this)"><span class="spacer"></span><button class="btn primaryAction" onclick="openSchoolModal()">＋ مدرسه جدید</button></div></div>
     <div class="panel adminDataPanel"><div class="tableWrap"><div id="schoolsTbl">در حال بارگذاری...</div></div><div class="pagination" id="schoolsPager"></div></div>`;
   await loadSchools();
 }
 let searchTimer;
 function debounceSearch() { clearTimeout(searchTimer); searchTimer = setTimeout(applyFilters, 400); }
 function applyFilters() {
-  SCHOOL_FILTERS = { q: document.getElementById('fQ').value, district_id: document.getElementById('fDistrict').value, company_id: document.getElementById('fCompany').value, status: document.getElementById('fStatus').value };
+  SCHOOL_FILTERS = { q: document.getElementById('fQ').value, district_id: document.getElementById('fDistrict').value, company_id: document.getElementById('fCompany').value, is_active: document.getElementById('fActivity').value, status: document.getElementById('fStatus').value };
   SCHOOL_PAGE = 1; loadSchools();
 }
 async function loadSchools() {
@@ -1515,7 +1515,7 @@ async function loadSchools() {
       <td>${esc(s.code)}</td><td>${esc(s.name)}</td><td>${esc(s.district_title || '—')}</td><td>${esc(s.company_title || '—')}</td>
       <td>${s.location_status === 'done' ? '<span class="badge done">ثبت‌شده</span>' : '<span class="badge pending">باقی‌مانده</span>'}</td>
       <td>${esc(s.editor_name || '—')}</td>
-      <td><button class="btn secondary sm" onclick="openSchoolDetail(${s.id})">مشاهده/ویرایش</button>
+      <td><button class="btn secondary sm" onclick="toggleSchoolActive(${s.id}, ${s.is_active ? 0 : 1})">${s.is_active ? 'غیرفعال‌سازی مدرسه' : 'فعال‌سازی مدرسه'}</button> <button class="btn secondary sm" onclick="openSchoolDetail(${s.id})">مشاهده/ویرایش</button>
           <button class="btn secondary sm" onclick="viewSchoolImage(${s.id})">مشاهده تصویر مدرسه</button>
           ${s.lat ? `<button class="btn secondary sm" onclick="showSchoolOnMap(${s.id}, ${s.lat}, ${s.lng}, '${esc(s.name).replace(/'/g, "\\'")}')">نمایش در نقشه</button>` : ''}
           <button class="btn danger sm" onclick="deleteSchool(${s.id})">حذف</button></td>
@@ -1526,6 +1526,12 @@ async function loadSchools() {
     const b = document.createElement('button'); b.textContent = i; if (i === data.page) b.classList.add('active');
     b.onclick = () => { SCHOOL_PAGE = i; loadSchools(); }; pager.appendChild(b);
   }
+}
+async function toggleSchoolActive(id, active) {
+  const action = active ? 'فعال‌سازی' : 'غیرفعال‌سازی';
+  if (!confirm(`آیا از ${action} این مدرسه مطمئن هستید؟`)) return;
+  try { await api('/admin/schools/' + id + '/active', { method: 'PUT', body: { is_active: active ? 1 : 0 } }); toast(active ? 'مدرسه فعال شد.' : 'مدرسه غیرفعال شد.'); await loadSchools(); }
+  catch (e) { toast(e.message, true); }
 }
 async function downloadSchoolTemplate(){
   try{
