@@ -224,12 +224,14 @@ route('POST', '/api/unified-login', function ($p, $b) {
   _rate_limit('unified_login_' . _client_ip() . '_' . $u, 10, 900);
   _ensure_admin_role_column();
   $admin = Db::one("SELECT * FROM admin_users WHERE username=? AND is_active=1", [$u]);
+  if (!$admin) $admin = Db::one("SELECT * FROM admin_users WHERE TRIM(username)=? AND is_active=1", [$u]);
   if ($admin && _verify_login_password($pw, $admin['password_hash'])) {
     if (!password_verify($pw, (string)$admin['password_hash'])) Db::run("UPDATE admin_users SET password_hash=? WHERE id=?", [password_hash($pw, PASSWORD_BCRYPT), $admin['id']]);
     return ['type' => 'admin', 'token' => _issue_admin_token($admin), 'user' => ['id' => $admin['id'], 'username' => $admin['username'], 'full_name' => $admin['full_name'], 'role' => $admin['role'] ?? 'super_admin']];
   }
   _ensure_company_columns();
   $company = Db::one("SELECT cu.*, c.title company_title, c.is_active company_active, c.profile_completed FROM company_users cu JOIN companies c ON c.id=cu.company_id WHERE cu.username=?", [$u]);
+  if (!$company) $company = Db::one("SELECT cu.*, c.title company_title, c.is_active company_active, c.profile_completed FROM company_users cu JOIN companies c ON c.id=cu.company_id WHERE TRIM(cu.username)=?", [$u]);
   if ($company && _verify_login_password($pw, $company['password_hash'])) {
     if (!password_verify($pw, (string)$company['password_hash'])) Db::run("UPDATE company_users SET password_hash=? WHERE id=?", [password_hash($pw, PASSWORD_BCRYPT), $company['id']]);
     if (!$company['is_active']) Http::error('حساب کاربری شما غیرفعال شده است.', 403);
@@ -247,7 +249,7 @@ route('POST', '/api/unified-login', function ($p, $b) {
 
 route('POST', '/api/admin/login', function ($p, $b) {
   _ensure_admin_role_column();
-  $u = trim($b['username'] ?? ''); $pw = (string)($b['password'] ?? '');
+  $u = _normalize_login_username($b['username'] ?? ''); $pw = (string)($b['password'] ?? '');
   if (!$u || !$pw) Http::error('نام کاربری و رمز عبور را وارد کنید', 400);
   _rate_limit('admin_login_' . _client_ip() . '_' . $u, 8, 900);
   $row = Db::one("SELECT * FROM admin_users WHERE username=? AND is_active=1", [$u]);
