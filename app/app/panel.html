@@ -264,7 +264,6 @@ tr:hover td{background:var(--brand-soft)}
     <a class="nav-item" data-tab="reports" onclick="goTab('reports')"><span class="ic">📈</span> گزارش‌ها</a>
     <a class="nav-item" data-tab="settings" onclick="goTab('settings')"><span class="ic">⚙️</span> تنظیمات سامانه</a>
     <a class="nav-item" data-tab="schoolFields" onclick="goTab('schoolFields')"><span class="ic">🧩</span> آیتم‌های مشخصات مدرسه</a>
-    <a class="nav-item hidden" id="navAdminUsers" data-tab="adminUsers" onclick="goTab('adminUsers')"><span class="ic">🔐</span> کاربران و دسترسی‌ها</a>
     <a class="nav-item logoutItem" onclick="logout()"><span class="ic">⏻</span> خروج</a>
   </div>
   <div id="main"></div>
@@ -925,6 +924,18 @@ async function exportSiteVisits(){try{const g=document.getElementById('svGroup')
 async function renderSettings() {
   const main=document.getElementById('main'); main.classList.add('settingsPage');
   main.innerHTML = `<div class="settingsHero"><div><h1>تنظیمات سامانه</h1><p>مدیریت متمرکز ظاهر، اطلاعات پایه، دسترسی‌ها، نقشه، پیامک و تنظیمات فنی سامانه</p></div><div class="settingsHeroBadge"><i>⚙️</i> پنل مدیریت سیستم</div></div><div class="settingsSectionIntro"><div><h2>تنظیمات سامانه</h2><p>پیکربندی متمرکز سامانه؛ فقط بخش انتخاب‌شده را مدیریت کنید.</p></div></div>
+    ${ME && ME.role === 'super_admin' ? `<div class="panel settingsAdminUsersCard" style="max-width:900px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+        <div>
+          <h3 style="margin-bottom:6px">👥 مدیریت کاربران و تعیین سطح دسترسی</h3>
+          <div style="font-size:12.5px;color:var(--muted);line-height:1.9">
+            ایجاد، ویرایش، فعال/غیرفعال‌سازی کاربران مدیر سامانه و تعیین نقش و سطح دسترسی هر کاربر.
+          </div>
+        </div>
+        <button class="btn" onclick="goTab('adminUsers')">ورود به مدیریت کاربران و دسترسی‌ها</button>
+      </div>
+    </div>` : ''}
+
     <div class="panel" style="max-width:520px">
       <h3>برندینگ سایت</h3>
       <div class="field"><label>عنوان سایت</label><input id="setSiteTitle"></div>
