@@ -1339,7 +1339,7 @@ route('GET','/api/admin/analytics',function($p,$b,$u){
 route('GET','/api/admin/analytics/schools',function($p,$b,$u){
   _ensure_school_columns();
   $q=trim($_GET['q']??'');$args=[];$where=' WHERE s.is_active=1';
-  if($q!==''){$like='%'.$q.'%';$where=' WHERE s.name LIKE ? OR s.code LIKE ?';$args=[$like,$like];}
+  if($q!==''){$like='%'.$q.'%';$where=' WHERE s.is_active=1 AND (s.name LIKE ? OR s.code LIKE ?)';$args=[$like,$like];}
   $rows=Db::all("SELECT s.id,s.code,s.name,s.student_count,s.level,s.gender,s.shift,s.address,s.phone,s.lat,s.lng,s.photo_path,s.location_status,s.location_recorded_at,s.district_id,d.title district_title,s.company_id,c.title company_title FROM schools s LEFT JOIN districts d ON d.id=s.district_id LEFT JOIN companies c ON c.id=s.company_id $where ORDER BY d.title,s.name LIMIT 5000",$args);
   if(_setting_get('show_school_photos','0')==='1') foreach($rows as &$row){if(!empty($row['photo_path']))$row['photo_url']='/api/media?path='.rawurlencode($row['photo_path']);} else foreach($rows as &$row){unset($row['photo_path']);}
   unset($row); return $rows;
@@ -1478,7 +1478,7 @@ route('POST', '/api/schools/{id}/location', function ($p, $b, $u) {
 // داشبورد نماینده: لیست مدارسی که بازدید/ویرایش کرده
 route('GET', '/api/my/visits', function ($p, $b, $u) {
   return Db::all("SELECT s.id,s.code,s.name,s.location_status,s.photo_path,MAX(l.created_at) last_visit_at, COUNT(l.id) visits_count
-    FROM school_visit_logs l JOIN schools s ON s.id=l.school_id
+    FROM school_visit_logs l JOIN schools s ON s.id=l.school_id AND s.is_active=1
     WHERE l.company_user_id=? GROUP BY s.id ORDER BY last_visit_at DESC", [$u['id']]);
 }, false, 'company');
 
