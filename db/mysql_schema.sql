@@ -119,6 +119,7 @@ CREATE TABLE IF NOT EXISTS schools (
   gps_accuracy DOUBLE NULL,
   photo_path VARCHAR(255) NULL,                -- عکس مدرسه (فقط دوربین)
   location_status VARCHAR(20) NOT NULL DEFAULT 'pending', -- pending | done
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
   location_recorded_at DATETIME NULL,
   edited_by INT NULL,                          -- company_users.id آخرین ویرایش‌کننده
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
