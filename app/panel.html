@@ -417,6 +417,41 @@ table{border-spacing:0 7px;border-collapse:separate}thead th{background:#eef3f9;
 @media(max-width:1100px){.dashboardStats{grid-template-columns:repeat(2,minmax(0,1fr))}.dashboardGrid2{grid-template-columns:1fr}}
 @media(max-width:560px){.dashboardStats{grid-template-columns:1fr}.dashboardQuick{grid-template-columns:1fr}.dashboardHero{padding:20px}.dashboardHero h1{font-size:19px}}
 
+/* ===== صفحه تحلیل و آمار - چیدمان مرجع مدیریتی ===== */
+.analyticsPage{min-height:100%;padding:2px 0 30px;background:#f4f7fb}
+.analyticsPage,.analyticsPage *{font-family:"Vazirmatn","Vazir",Tahoma,system-ui,sans-serif}
+.analyticsPage .analyticsTop{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.analyticsKpi{position:relative;display:flex;align-items:center;gap:12px;min-height:82px;padding:12px 14px;background:#fff;border:1px solid #dfe7ef;border-radius:16px;box-shadow:0 7px 20px rgba(16,42,67,.055);overflow:hidden}
+.analyticsKpi:after{content:"";position:absolute;left:-22px;bottom:-31px;width:72px;height:72px;border-radius:50%;background:rgba(254,198,23,.08)}
+.analyticsKpiIcon{width:48px;height:48px;flex:0 0 48px;display:grid;place-items:center;border-radius:14px;background:#102e50;color:#fec617;font-size:23px;box-shadow:inset 0 0 0 1px rgba(254,198,23,.14)}
+.analyticsKpiText{min-width:0}.analyticsKpiText b{display:block;font-size:23px;line-height:1.2;color:#173653;font-weight:950}.analyticsKpiText span{display:block;margin-top:3px;color:#66758a;font-size:11px;font-weight:800}
+.analyticsBody{display:grid;grid-template-columns:minmax(0,1fr) 245px;gap:14px;direction:ltr}
+.analyticsMain{min-width:0;direction:rtl}
+.analyticsFilters{direction:rtl;background:linear-gradient(180deg,#08294b,#0c3b68);color:#fff;border-radius:17px;padding:12px;box-shadow:0 12px 26px rgba(8,41,75,.18);height:max-content;position:sticky;top:12px}
+.analyticsFiltersTitle{font-weight:950;font-size:13px;padding:4px 4px 11px;border-bottom:1px solid rgba(255,255,255,.14);margin-bottom:9px}
+.analyticsFiltersLabel{font-size:10px;color:#c7d6e7;margin:4px 2px 6px}.analyticsFilters select{width:100%;height:36px;border:0;border-radius:9px;background:#fff;color:#173653;font-weight:800;font-size:11px;margin-bottom:10px}
+.analyticsDistrictList{display:grid;gap:6px}.analyticsDistrictBtn{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.045);color:#eaf2fa;border-radius:9px;padding:8px 9px;text-align:right;font-family:inherit;font-weight:800;font-size:11px;display:flex;align-items:center;justify-content:space-between;gap:7px}.analyticsDistrictBtn span:last-child{opacity:.68;font-size:10px}.analyticsDistrictBtn.active{background:#fec617;color:#201700;border-color:#fec617}.analyticsDistrictBtn:hover{background:rgba(254,198,23,.18)}
+.analyticsPanel{background:#fff;border:1px solid #dfe7ef;border-radius:17px;box-shadow:0 8px 24px rgba(16,42,67,.05);padding:12px;min-width:0}
+.analyticsPanelTitle{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}.analyticsPanelTitle h3{margin:0;color:#173653;font-size:13px;font-weight:950}.analyticsPanelTitle small{color:#7b8798;font-size:9.5px}
+.analyticsTopGrid{display:grid;grid-template-columns:1.02fr .98fr;gap:12px;margin-bottom:12px}
+.analyticsDistrictPanel{min-height:420px}.analyticsMapStage{height:350px;position:relative;overflow:hidden;border-radius:14px;background:radial-gradient(circle at 50% 50%,#fff 0,#f6f9fc 55%,#e9eff5 100%);border:1px solid #e7edf3}
+.analyticsMapStage:before,.analyticsMapStage:after{content:"";position:absolute;border:1px dashed #d7e0e9;border-radius:50%;left:50%;top:50%;transform:translate(-50%,-50%)}.analyticsMapStage:before{width:250px;height:250px}.analyticsMapStage:after{width:150px;height:150px}
+.analyticsMapCenter{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:86px;height:86px;border-radius:50%;background:#12385d;color:#fec617;display:grid;place-items:center;text-align:center;font-weight:950;font-size:12px;z-index:5;box-shadow:0 8px 22px rgba(12,50,82,.24);border:4px solid #fff}
+.analyticsDistrictShape{position:absolute;width:76px;height:76px;display:flex;align-items:center;justify-content:center;text-align:center;border-radius:26px 10px 26px 10px;color:#fff;font-weight:950;font-size:13px;cursor:pointer;box-shadow:0 8px 15px rgba(19,54,83,.14);border:2px solid rgba(255,255,255,.8);transition:.16s;z-index:3}.analyticsDistrictShape:hover{transform:scale(1.05);z-index:8}.analyticsDistrictShape.active{outline:3px solid #fec617;outline-offset:2px}.analyticsDistrictShape.blue{background:linear-gradient(145deg,#1b79bd,#0f4f8c)}.analyticsDistrictShape.gold{background:linear-gradient(145deg,#f3c94d,#d99b17)}
+.analyticsDistrictShape[data-d="1"]{left:50%;top:8%;transform:translateX(-50%);border-radius:30px 10px 30px 10px}.analyticsDistrictShape[data-d="2"]{right:16%;top:18%;transform:rotate(8deg)}.analyticsDistrictShape[data-d="3"]{right:5%;top:44%;transform:rotate(-8deg)}.analyticsDistrictShape[data-d="4"]{right:17%;bottom:15%;transform:rotate(7deg)}.analyticsDistrictShape[data-d="5"]{left:50%;bottom:5%;transform:translateX(-50%) rotate(-4deg)}.analyticsDistrictShape[data-d="6"]{left:17%;bottom:15%;transform:rotate(8deg)}.analyticsDistrictShape[data-d="7"]{left:5%;top:44%;transform:rotate(-7deg)}.analyticsDistrictShape[data-d="8"]{left:16%;top:18%;transform:rotate(6deg)}
+.analyticsDistrictLegend{display:grid;grid-template-columns:repeat(2,1fr);gap:4px 12px;margin-top:8px}.analyticsDistrictLegend div{font-size:10px;color:#687689;display:flex;justify-content:space-between;gap:5px}.analyticsDistrictLegend b{color:#173653}
+.analyticsBarChart{height:350px;display:flex;align-items:flex-end;gap:9px;padding:18px 6px 5px;border-bottom:1px solid #e3e8ee;background:linear-gradient(180deg,#fff,#fbfcfe);border-radius:12px}
+.analyticsBarGroup{height:100%;flex:1;display:flex;align-items:flex-end;justify-content:center;gap:3px;min-width:28px;position:relative}.analyticsBar{width:13px;min-height:3px;border-radius:5px 5px 0 0;position:relative}.analyticsBar.primary{background:linear-gradient(180deg,#f7ca4e,#dfa91d)}.analyticsBar.secondary{background:linear-gradient(180deg,#173d67,#0d2d4e)}.analyticsBarValue{position:absolute;top:-17px;left:50%;transform:translateX(-50%);font-size:7.5px;color:#718095;white-space:nowrap}.analyticsBarLabel{position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);font-size:9px;color:#5d6c80;white-space:nowrap}.analyticsChartLegend{display:flex;justify-content:flex-start;gap:15px;margin-top:7px;font-size:10px;color:#657286}.analyticsChartLegend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-left:4px;vertical-align:-1px}.analyticsChartLegend .primary{background:#e4ad27}.analyticsChartLegend .secondary{background:#12385d}
+.analyticsMiddleGrid{display:grid;grid-template-columns:.95fr 1.05fr;gap:12px;margin-bottom:12px}
+.analyticsDonutWrap{display:flex;align-items:center;gap:18px;min-height:180px}.analyticsDonut{width:155px;height:155px;border-radius:50%;background:conic-gradient(#e6b12b 0 var(--primary-p),#12385d var(--primary-p) 100%);position:relative;flex:0 0 155px}.analyticsDonut:after{content:"";position:absolute;inset:35px;background:#fff;border-radius:50%;box-shadow:inset 0 0 0 1px #edf1f5}.analyticsDonutCenter{position:absolute;inset:0;display:grid;place-items:center;z-index:2;text-align:center;font-size:11px;color:#66758a;font-weight:800}.analyticsDonutCenter b{display:block;font-size:18px;color:#173653}.analyticsLegendList{display:grid;gap:10px}.analyticsLegendItem{display:flex;align-items:center;gap:7px;font-size:11px;color:#66758a}.analyticsLegendItem i{width:10px;height:10px;border-radius:3px}.analyticsLegendItem b{display:block;color:#173653;font-size:13px}
+.analyticsCompanyMini{overflow:auto;max-height:195px}.analyticsCompanyMini table{font-size:10px}.analyticsCompanyMini th,.analyticsCompanyMini td{padding:6px 5px}.analyticsCompanyMini th{font-size:9px;background:#f1f5f9}.analyticsDot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#174f82;margin-left:5px}.analyticsShare{font-weight:900;color:#173653}
+.analyticsBottomGrid{display:grid;grid-template-columns:1.02fr 1.18fr .76fr;gap:12px}.analyticsSchoolList{max-height:310px;overflow:auto}.analyticsSchoolRow{display:grid;grid-template-columns:28px 1fr auto;gap:7px;align-items:center;padding:7px 5px;border-bottom:1px solid #edf1f5;cursor:pointer}.analyticsSchoolRow:hover,.analyticsSchoolRow.active{background:#fff8df}.analyticsSchoolRow .rank{font-size:9px;color:#8895a6}.analyticsSchoolRow b{display:block;color:#26445f;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.analyticsSchoolRow small{display:block;color:#8591a0;font-size:8.5px;margin-top:1px}.analyticsSchoolStudents{font-size:10px;font-weight:900;color:#173653;white-space:nowrap}
+.analyticsSchoolDetail{overflow:hidden}.analyticsSchoolPhoto{width:100%;height:125px;object-fit:cover;border-radius:12px;background:#e9eef3;display:block;margin-bottom:9px}.analyticsSchoolPlaceholder{height:125px;border-radius:12px;background:linear-gradient(135deg,#e7edf3,#f8fafc);display:grid;place-items:center;color:#8a97a8;font-size:11px;margin-bottom:9px}.analyticsDetailName{font-size:14px;font-weight:950;color:#173653;margin-bottom:7px}.analyticsDetailLine{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid #edf1f5;font-size:9.5px;color:#6c798b}.analyticsDetailLine b{color:#294762}.analyticsDetailAction{margin-top:9px;width:100%}
+.analyticsEmpty{padding:28px;text-align:center;color:#7d8999;font-size:11px}
+@media(max-width:1250px){.analyticsBody{grid-template-columns:205px 1fr}.analyticsTopGrid,.analyticsMiddleGrid{grid-template-columns:1fr}.analyticsBottomGrid{grid-template-columns:1fr 1fr}.analyticsSchoolDetail{grid-column:1/-1}} 
+@media(max-width:900px){.analyticsPage .analyticsTop{grid-template-columns:repeat(2,1fr)}.analyticsBody{grid-template-columns:1fr}.analyticsFilters{position:static}.analyticsDistrictList{grid-template-columns:repeat(4,1fr)}.analyticsBottomGrid{grid-template-columns:1fr}.analyticsSchoolDetail{grid-column:auto}}
+@media(max-width:560px){.analyticsPage .analyticsTop{grid-template-columns:1fr}.analyticsDistrictList{grid-template-columns:repeat(2,1fr)}.analyticsDonutWrap{flex-direction:column;align-items:flex-start}.analyticsBarChart{gap:4px}.analyticsBar{width:8px}}
+
 /* ===== پوسته یکپارچه و حرفه‌ای صفحات ادمین ===== */
 .adminModernPage{min-height:100%;padding-bottom:28px}.adminModernPage .pageTitle{display:none}.adminModernPage>.panel,.adminModernPage>.toolbar,.adminModernPage>.complaintHero,.adminModernPage>.complaintKpis,.adminModernPage>.complaintWorkspace,.adminModernPage>.settingsCard{box-sizing:border-box}.adminModernHero{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:22px 24px;margin-bottom:15px;border:1px solid #dce5ef;border-radius:23px;background:linear-gradient(135deg,#101820 0%,#203d55 62%,#315a76 100%);color:#fff;box-shadow:0 16px 38px rgba(16,35,52,.14)}.adminModernHero:after{content:'';position:absolute;width:220px;height:220px;border-radius:50%;left:-85px;bottom:-145px;background:rgba(254,198,23,.11)}.adminModernHeroMain{position:relative;z-index:1}.adminModernHero h1{margin:0 0 5px;font-size:21px;font-weight:950}.adminModernHero p{margin:0;color:rgba(255,255,255,.75);font-size:12px;line-height:1.9}.adminModernHeroIcon{position:relative;z-index:1;width:54px;height:54px;display:grid;place-items:center;border-radius:17px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.14);font-size:27px}.adminModernActions{position:relative;z-index:1;display:flex;gap:8px;flex-wrap:wrap}.adminModernActions .btn{box-shadow:none}.adminModernActions .btn:first-child{background:var(--gold);color:#17120a;border-color:var(--gold)}.adminModernKpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:15px}.adminModernKpi{background:#fff;border:1px solid #e3e9f0;border-radius:17px;padding:13px 15px;box-shadow:0 8px 23px rgba(16,42,67,.045)}.adminModernKpi b{display:block;font-size:19px;color:#173653}.adminModernKpi span{display:block;color:var(--muted);font-size:10.5px;margin-top:3px}.adminModernPage>.panel{border-radius:19px;border-color:#e1e8ef;box-shadow:0 9px 27px rgba(16,42,67,.05)}.adminModernPage>.panel h3{color:#173653}.adminModernPage>.toolbar{padding:12px;border:1px solid #dfe7f0;border-radius:17px;background:#fff;box-shadow:0 8px 23px rgba(16,42,67,.045);margin-bottom:14px}.adminModernPage table thead th{background:#f4f7fa;color:#29445e;font-weight:900;white-space:nowrap}.adminModernPage table tbody tr:hover{background:#fffaf0}.adminModernPage .panel>.tableWrap{border-radius:14px;overflow:auto}.adminModernPage .panel>.toolbar{border:0;box-shadow:none;background:#f7f9fb}.adminModernPage .reservationMapLegend{border-radius:13px}.adminModernPage .reservationMapBox,.adminModernPage .coverageMapBox{border-radius:16px;overflow:hidden}.adminModernPage .complaintHero{border-radius:22px;box-shadow:0 15px 34px rgba(16,42,67,.08)}.adminModernPage .complaintWorkspace>aside,.adminModernPage .complaintWorkspace>section{border-radius:18px;box-shadow:0 9px 27px rgba(16,42,67,.05)}.adminModernPage .settingsTabs{border-radius:17px}.adminModernPage .settingsCard{border-radius:19px}.adminModernPage .pagination button{border-radius:10px}.adminModernPage .btn{transition:transform .16s ease,box-shadow .16s ease}.adminModernPage .btn:hover{transform:translateY(-1px)}
 @media(max-width:900px){.adminModernKpis{grid-template-columns:repeat(2,minmax(0,1fr))}.adminModernHero{align-items:flex-start;flex-direction:column}.adminModernHeroIcon{position:absolute;left:18px;top:18px}}
@@ -1171,7 +1206,7 @@ const ADMIN_PAGE_META={
   schoolReservationStatus:['🏫','وضعیت مدارس','نمایش وضعیت رزرو و سرویس‌دهی مدارس']
 };
 function enhanceAdminPage(tab){
-  const main=document.getElementById('main'); if(!main || tab==='dashboard' || tab==='settings') return;
+  const main=document.getElementById('main'); if(!main || tab==='dashboard' || tab==='settings' || tab==='analytics') return;
   main.classList.add('adminModernPage');
   const meta=ADMIN_PAGE_META[tab]; if(!meta) return;
   let hero=main.querySelector(':scope > .adminModernHero');
@@ -1683,12 +1718,146 @@ async function openSchoolDetail(id) {
 
 /* ==================== تحلیل و آمار ==================== */
 let ANALYTICS_CACHE=null;
+let ANALYTICS_FILTER_DISTRICT='';
+let ANALYTICS_SELECTED_SCHOOL=null;
 function analyticsNum(v){return Number(v||0).toLocaleString('fa-IR');}
-function analyticsBar(rows,labelKey,valueKey){if(!rows||!rows.length)return '<div style="color:var(--muted);padding:12px">داده‌ای وجود ندارد.</div>';const max=Math.max(1,...rows.map(x=>Number(x[valueKey]||0)));return rows.map(x=>{const val=Number(x[valueKey]||0),pct=Math.max(2,Math.round(val/max*100));return '<div style="margin:10px 0"><div style="display:flex;justify-content:space-between;font-size:12px"><b>'+esc(x[labelKey]||'نامشخص')+'</b><span>'+analyticsNum(val)+'</span></div><div style="height:9px;background:#eef1f5;border-radius:99px;overflow:hidden;margin-top:5px"><div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,var(--gold),var(--gold-2));border-radius:99px"></div></div></div>';}).join('');}
-async function renderAnalytics(){const main=document.getElementById('main');main.innerHTML='<div class="panel">در حال بارگذاری تحلیل آماری...</div>';try{const d=ANALYTICS_CACHE=await api('/admin/analytics');main.innerHTML='<div class="grid stats"><div class="statCard"><div class="v">'+analyticsNum(d.summary.total_schools)+'</div><div class="l">مدارس</div></div><div class="statCard"><div class="v">'+analyticsNum(d.summary.total_companies)+'</div><div class="l">شرکت‌ها</div></div><div class="statCard"><div class="v">'+analyticsNum(d.summary.total_districts)+'</div><div class="l">نواحی</div></div><div class="statCard dark"><div class="v">'+analyticsNum(d.summary.total_students)+'</div><div class="l">دانش‌آموزان</div></div></div><div class="grid" style="grid-template-columns:1fr 1fr;gap:16px"><div class="panel"><h3>تعداد مدارس هر ناحیه</h3>'+analyticsBar(d.by_district,'district_title','school_count')+'</div><div class="panel"><h3>تعداد مدارس تحت نظارت هر شرکت</h3>'+analyticsBar(d.by_company,'company_title','school_count')+'</div></div><div class="grid" style="grid-template-columns:1fr 1fr;gap:16px"><div class="panel"><h3>توزیع مدارس بر اساس مقطع</h3>'+analyticsBar(d.by_level,'level','school_count')+'</div><div class="panel"><h3>تحلیل یک شرکت</h3><div class="toolbar"><select id="analyticsCompany" style="min-width:260px"><option value="">انتخاب شرکت</option>'+d.by_company.map(c=>'<option value="'+c.company_id+'">'+esc(c.company_title||'بدون شرکت')+'</option>').join('')+'</select><button class="btn secondary" onclick="loadAnalyticsCompany()">نمایش</button></div><div id="analyticsCompanyBody">یک شرکت را انتخاب کنید.</div></div></div><div class="panel"><div class="toolbar"><b>فهرست تجمیعی مدارس</b><span class="spacer"></span><input id="analyticsQ" placeholder="جستجوی نام یا کد" oninput="filterAnalyticsSchools()"><select id="analyticsDistrict" onchange="filterAnalyticsSchools()"><option value="">همه نواحی</option>'+d.by_district.map(x=>'<option value="'+x.district_id+'">'+esc(x.district_title)+'</option>').join('')+'</select></div><div id="analyticsSchoolsTable"></div></div>';renderAnalyticsSchools(d.schools||[]);}catch(e){main.innerHTML='<div class="panel"><b>خطا در بارگذاری تحلیل</b><div style="color:var(--danger)">'+esc(e.message)+'</div></div>';}}
-function renderAnalyticsSchools(rows){window.__analyticsSchools=rows||[];const q=(document.getElementById('analyticsQ')?.value||'').trim().toLowerCase(),district=document.getElementById('analyticsDistrict')?.value||'';const a=window.__analyticsSchools.filter(s=>(!q||String(s.name||'').toLowerCase().includes(q)||String(s.code||'').toLowerCase().includes(q))&&(!district||String(s.district_id)===String(district)));document.getElementById('analyticsSchoolsTable').innerHTML='<div style="overflow:auto"><table><thead><tr><th>کد</th><th>مدرسه</th><th>ناحیه</th><th>مقطع</th><th>دانش‌آموز</th><th>شرکت</th></tr></thead><tbody>'+a.map(s=>'<tr><td>'+esc(s.code||'—')+'</td><td>'+esc(s.name||'—')+'</td><td>'+esc(s.district_title||'—')+'</td><td>'+esc(s.level||'—')+'</td><td>'+analyticsNum(s.student_count)+'</td><td>'+esc(s.company_title||'بدون شرکت')+'</td></tr>').join('')+'</tbody></table></div><div style="color:var(--muted);font-size:11px;margin-top:8px">تعداد نمایش: '+analyticsNum(a.length)+'</div>';}
-function filterAnalyticsSchools(){renderAnalyticsSchools(window.__analyticsSchools||[]);}
-async function loadAnalyticsCompany(){const id=document.getElementById('analyticsCompany')?.value,box=document.getElementById('analyticsCompanyBody');if(!id){box.innerHTML='یک شرکت را انتخاب کنید.';return;}box.innerHTML='در حال بارگذاری...';try{const d=await api('/admin/analytics/company/'+id);box.innerHTML='<div class="grid stats" style="grid-template-columns:repeat(3,1fr)"><div class="statCard"><div class="v">'+analyticsNum(d.summary.school_count)+'</div><div class="l">مدرسه</div></div><div class="statCard"><div class="v">'+analyticsNum(d.summary.student_count)+'</div><div class="l">دانش‌آموز</div></div><div class="statCard"><div class="v">'+analyticsNum(d.summary.district_count)+'</div><div class="l">ناحیه</div></div></div><div style="max-height:300px;overflow:auto"><table><thead><tr><th>مدرسه</th><th>ناحیه</th><th>مقطع</th><th>دانش‌آموز</th></tr></thead><tbody>'+d.schools.map(s=>'<tr><td>'+esc(s.name)+'</td><td>'+esc(s.district_title||'—')+'</td><td>'+esc(s.level||'—')+'</td><td>'+analyticsNum(s.student_count)+'</td></tr>').join('')+'</tbody></table></div>';}catch(e){box.innerHTML='<span style="color:var(--danger)">'+esc(e.message)+'</span>';}}
+function analyticsPct(v,total){return total?Math.round(Number(v||0)/Number(total||1)*100):0;}
+function analyticsLevelTotals(rows){
+  let primary=0,secondary=0,other=0;
+  (rows||[]).forEach(r=>{
+    const n=Number(r.student_count||0),lv=String(r.level||'');
+    if(lv.includes('دبستان')) primary+=n;
+    else if(lv.includes('دبیرستان')||lv.includes('متوسطه')) secondary+=n;
+    else other+=n;
+  });
+  return {primary,secondary,other,total:primary+secondary+other};
+}
+function analyticsDistrictRows(){
+  const d=ANALYTICS_CACHE||{};
+  return (d.by_district||[]).filter(x=>!ANALYTICS_FILTER_DISTRICT||String(x.district_id)===String(ANALYTICS_FILTER_DISTRICT));
+}
+function analyticsSchoolsRows(){
+  const d=ANALYTICS_CACHE||{};
+  return (d.schools||[]).filter(x=>!ANALYTICS_FILTER_DISTRICT||String(x.district_id)===String(ANALYTICS_FILTER_DISTRICT));
+}
+function analyticsSchoolDetail(s){
+  const box=document.getElementById('analyticsSchoolDetail'); if(!box)return;
+  ANALYTICS_SELECTED_SCHOOL=s||null;
+  if(!s){box.innerHTML='<div class="analyticsEmpty">یک مدرسه را از فهرست انتخاب کنید.</div>';return;}
+  const photo=schoolPhotosVisible()&&s.photo_url?'<img class="analyticsSchoolPhoto" src="'+esc(s.photo_url)+'" alt="" onerror="this.style.display=none">':'<div class="analyticsSchoolPlaceholder">تصویر مدرسه ثبت نشده است</div>';
+  box.innerHTML=photo+
+    '<div class="analyticsDetailName">'+esc(s.name||'—')+'</div>'+
+    '<div class="analyticsDetailLine"><span>ناحیه</span><b>'+esc(s.district_title||'—')+'</b></div>'+
+    '<div class="analyticsDetailLine"><span>شرکت سرویس‌دهنده</span><b>'+esc(s.company_title||'بدون شرکت')+'</b></div>'+
+    '<div class="analyticsDetailLine"><span>مقطع</span><b>'+esc(s.level||'—')+'</b></div>'+
+    '<div class="analyticsDetailLine"><span>جنسیت</span><b>'+esc(s.gender||'—')+'</b></div>'+
+    '<div class="analyticsDetailLine"><span>دانش‌آموز</span><b>'+analyticsNum(s.student_count)+'</b></div>'+
+    '<div class="analyticsDetailLine"><span>آدرس</span><b>'+esc(s.address||'—')+'</b></div>'+
+    '<button class="btn analyticsDetailAction" onclick="goTab(\'schools\')">مشاهده در بخش مدارس</button>';
+}
+function analyticsRenderDistrictMap(rows){
+  const host=document.getElementById('analyticsDistrictMap'); if(!host)return;
+  const all=ANALYTICS_CACHE?.by_district||[],max=Math.max(1,...all.map(x=>Number(x.school_count||0)));
+  const list=Array.from({length:8},(_,i)=>all.find(x=>String(x.district_title||'').includes(String(i+1)))||all[i]);
+  host.innerHTML='<div class="analyticsMapCenter">مشهد<br><span style="font-size:9px">توزیع مدارس</span></div>'+
+    list.map((r,i)=>r?'<button class="analyticsDistrictShape '+(i%2?'gold':'blue')+' '+(String(r.district_id)===String(ANALYTICS_FILTER_DISTRICT)?'active':'')+'" data-d="'+(i+1)+'" onclick="setAnalyticsDistrict(\''+esc(r.district_id)+'\')">ناحیه '+esc((r.district_title||'').replace(/ناحیه\s*/,'')||String(i+1))+'<small style="display:block;font-size:8px;margin-top:2px">'+analyticsNum(r.school_count)+' مدرسه</small></button>':'').join('')+
+    '<div class="analyticsDistrictLegend">'+all.slice(0,8).map(r=>'<div><span>'+esc(r.district_title||'نامشخص')+'</span><b>'+analyticsNum(r.student_count)+' نفر</b></div>').join('')+'</div>';
+}
+function analyticsRenderLevelChart(rows){
+  const host=document.getElementById('analyticsLevelChart'); if(!host)return;
+  if(!rows.length){host.innerHTML='<div class="analyticsEmpty">داده‌ای برای نمایش وجود ندارد.</div>';return;}
+  const max=Math.max(1,...rows.map(r=>Math.max(Number(r.primary_students||0),Number(r.secondary_students||0))));
+  host.innerHTML=rows.slice(0,8).map((r,i)=>{
+    const p=Number(r.primary_students||0),s=Number(r.secondary_students||0);
+    const ph=Math.max(3,Math.round(p/max*285)),sh=Math.max(3,Math.round(s/max*285));
+    return '<div class="analyticsBarGroup"><div class="analyticsBar primary" style="height:'+ph+'px"><span class="analyticsBarValue">'+analyticsNum(p)+'</span></div><div class="analyticsBar secondary" style="height:'+sh+'px"><span class="analyticsBarValue">'+analyticsNum(s)+'</span></div><span class="analyticsBarLabel">'+esc((r.district_title||'').replace(/ناحیه\s*/,'')||String(i+1))+'</span></div>';
+  }).join('');
+}
+function analyticsRenderDonut(rows){
+  const host=document.getElementById('analyticsDonutBox'); if(!host)return;
+  const t=analyticsLevelTotals(rows), p=t.total?Math.round(t.primary/t.total*100):0;
+  host.innerHTML='<div class="analyticsDonutWrap"><div class="analyticsDonut" style="--primary-p:'+p+'%"><div class="analyticsDonutCenter"><div><b>'+analyticsNum(t.total)+'</b>دانش‌آموز</div></div></div><div class="analyticsLegendList"><div class="analyticsLegendItem"><i style="background:#e6b12b"></i><div><b>'+analyticsNum(t.primary)+'</b>دبستان — '+p+'٪</div></div><div class="analyticsLegendItem"><i style="background:#12385d"></i><div><b>'+analyticsNum(t.secondary)+'</b>دبیرستان/متوسطه — '+analyticsPct(t.secondary,t.total)+'٪</div></div>'+(t.other?'<div class="analyticsLegendItem"><i style="background:#a8b3c1"></i><div><b>'+analyticsNum(t.other)+'</b>سایر — '+analyticsPct(t.other,t.total)+'٪</div></div>':'')+'</div></div>';
+}
+function analyticsRenderCompanies(rows){
+  const host=document.getElementById('analyticsCompanyTable'); if(!host)return;
+  const source=(rows||[]).filter(r=>!ANALYTICS_FILTER_DISTRICT||true).slice(0,8);
+  const total=Number((ANALYTICS_CACHE?.summary||{}).total_schools||0);
+  host.innerHTML='<div class="analyticsCompanyMini"><table><thead><tr><th>#</th><th>نام شرکت</th><th>مدارس</th><th>دانش‌آموز</th><th>سهم</th></tr></thead><tbody>'+
+    source.map((r,i)=>'<tr><td>'+(i+1)+'</td><td><span class="analyticsDot"></span>'+esc(r.company_title||'بدون شرکت')+'</td><td>'+analyticsNum(r.school_count)+'</td><td>'+analyticsNum(r.student_count)+'</td><td class="analyticsShare">'+analyticsPct(r.school_count,total)+'٪</td></tr>').join('')+
+    '</tbody></table></div>';
+}
+function analyticsRenderSchools(rows){
+  const host=document.getElementById('analyticsSchoolList'); if(!host)return;
+  const list=rows.slice(0,80);
+  if(!list.length){host.innerHTML='<div class="analyticsEmpty">مدرسه‌ای در این ناحیه وجود ندارد.</div>';analyticsSchoolDetail(null);return;}
+  if(!ANALYTICS_SELECTED_SCHOOL||!list.some(x=>x.id===ANALYTICS_SELECTED_SCHOOL.id)) ANALYTICS_SELECTED_SCHOOL=list[0];
+  host.innerHTML=list.map((s,i)=>'<div class="analyticsSchoolRow '+(ANALYTICS_SELECTED_SCHOOL&&s.id===ANALYTICS_SELECTED_SCHOOL.id?'active':'')+'" onclick="selectAnalyticsSchool('+Number(s.id)+')"><span class="rank">'+(i+1)+'</span><div><b>'+esc(s.name||'—')+'</b><small>'+esc(s.district_title||'—')+' | '+esc(s.level||'—')+'</small></div><span class="analyticsSchoolStudents">'+analyticsNum(s.student_count)+'</span></div>').join('');
+  analyticsSchoolDetail(ANALYTICS_SELECTED_SCHOOL);
+}
+function selectAnalyticsSchool(id){
+  const s=(ANALYTICS_CACHE?.schools||[]).find(x=>Number(x.id)===Number(id));
+  if(!s)return;
+  ANALYTICS_SELECTED_SCHOOL=s;
+  analyticsRenderSchools(analyticsSchoolsRows());
+}
+function setAnalyticsDistrict(id){
+  ANALYTICS_FILTER_DISTRICT=String(id||'');
+  ANALYTICS_SELECTED_SCHOOL=null;
+  document.querySelectorAll('.analyticsDistrictBtn').forEach(b=>b.classList.toggle('active',String(b.dataset.id)===ANALYTICS_FILTER_DISTRICT));
+  const sel=document.getElementById('analyticsDistrictSelect');if(sel)sel.value=ANALYTICS_FILTER_DISTRICT;
+  analyticsRenderAll();
+}
+function analyticsRenderAll(){
+  const rows=analyticsDistrictRows(),schools=analyticsSchoolsRows(),allDistricts=ANALYTICS_CACHE?.by_district||[];
+  analyticsRenderDistrictMap(rows);analyticsRenderLevelChart(rows.length?rows:allDistricts);analyticsRenderDonut(schools.length?schools:(ANALYTICS_CACHE?.schools||[]));analyticsRenderCompanies(ANALYTICS_CACHE?.by_company||[]);analyticsRenderSchools(schools);
+  const countEl=document.getElementById('analyticsScopeCount');if(countEl)countEl.textContent=ANALYTICS_FILTER_DISTRICT?(rows[0]?.district_title||'ناحیه انتخاب‌شده'):'همه نواحی';
+}
+async function renderAnalytics(){
+  const main=document.getElementById('main');
+  main.classList.remove('settingsPage','adminModernPage');
+  main.classList.add('analyticsPage');
+  main.innerHTML='<div class="analyticsEmpty">در حال بارگذاری تحلیل آماری...</div>';
+  try{
+    const d=ANALYTICS_CACHE=await api('/admin/analytics');
+    ANALYTICS_FILTER_DISTRICT='';ANALYTICS_SELECTED_SCHOOL=null;
+    const s=d.summary||{}, companies=d.by_company||[], districts=d.by_district||[];
+    main.innerHTML='<div class="analyticsTop">'+
+      '<div class="analyticsKpi"><div class="analyticsKpiIcon">🎓</div><div class="analyticsKpiText"><b>'+analyticsNum(s.total_students)+'</b><span>کل دانش‌آموزان سرویس‌شده</span></div></div>'+
+      '<div class="analyticsKpi"><div class="analyticsKpiIcon">🏫</div><div class="analyticsKpiText"><b>'+analyticsNum(s.total_schools)+'</b><span>تعداد مدارس</span></div></div>'+
+      '<div class="analyticsKpi"><div class="analyticsKpiIcon">🏢</div><div class="analyticsKpiText"><b>'+analyticsNum(s.total_companies)+'</b><span>تعداد شرکت‌های فعال</span></div></div>'+
+      '<div class="analyticsKpi"><div class="analyticsKpiIcon">📍</div><div class="analyticsKpiText"><b>'+analyticsNum(s.total_districts)+'</b><span>تعداد نواحی فعال</span></div></div>'+
+      '</div>'+
+      '<div class="analyticsBody">'+
+        '<section class="analyticsMain">'+
+          '<div class="analyticsTopGrid">'+
+            '<div class="analyticsPanel analyticsDistrictPanel"><div class="analyticsPanelTitle"><h3>توزیع مدارس در ۸ ناحیه آموزش و پرورش مشهد</h3><small id="analyticsScopeCount">همه نواحی</small></div><div id="analyticsDistrictMap" class="analyticsMapStage"></div></div>'+
+            '<div class="analyticsPanel"><div class="analyticsPanelTitle"><h3>تعداد دانش‌آموزان به تفکیک مقطع تحصیلی</h3><small>ابتدایی / متوسطه</small></div><div id="analyticsLevelChart" class="analyticsBarChart"></div><div class="analyticsChartLegend"><span><i class="primary"></i>دبستان</span><span><i class="secondary"></i>دبیرستان / متوسطه</span></div></div>'+
+          '</div>'+
+          '<div class="analyticsMiddleGrid">'+
+            '<div class="analyticsPanel"><div class="analyticsPanelTitle"><h3>سهم مقاطع تحصیلی از کل دانش‌آموزان</h3><small>بر اساس اطلاعات مدارس</small></div><div id="analyticsDonutBox"></div></div>'+
+            '<div class="analyticsPanel"><div class="analyticsPanelTitle"><h3>لیست شرکت‌های فعال</h3><small>۸ شرکت اول بر اساس تعداد مدارس</small></div><div id="analyticsCompanyTable"></div></div>'+
+          '</div>'+
+          '<div class="analyticsBottomGrid">'+
+            '<div class="analyticsPanel"><div class="analyticsPanelTitle"><h3>لیست مدارس در ناحیه</h3><small>انتخاب مدرسه برای مشاهده جزئیات</small></div><div id="analyticsSchoolList" class="analyticsSchoolList"></div></div>'+
+            '<div class="analyticsPanel"><div class="analyticsPanelTitle"><h3>جزئیات مدارس</h3><small>اطلاعات مدرسه انتخاب‌شده</small></div><div id="analyticsSchoolTable"></div></div>'+
+            '<div class="analyticsPanel analyticsSchoolDetail"><div class="analyticsPanelTitle"><h3>جزئیات مدرسه</h3><small>مشاهده سریع</small></div><div id="analyticsSchoolDetail"><div class="analyticsEmpty">یک مدرسه را از فهرست انتخاب کنید.</div></div></div>'+
+          '</div>'+
+        '</section>'+
+        '<aside class="analyticsFilters">'+
+          '<div class="analyticsFiltersTitle">نمایش بر اساس</div>'+
+          '<div class="analyticsFiltersLabel">انتخاب ناحیه</div>'+
+          '<select id="analyticsDistrictSelect" onchange="setAnalyticsDistrict(this.value)"><option value="">همه نواحی</option>'+districts.map(r=>'<option value="'+esc(r.district_id)+'">'+esc(r.district_title)+'</option>').join('')+'</select>'+
+          '<div class="analyticsDistrictList">'+districts.map(r=>'<button class="analyticsDistrictBtn" data-id="'+esc(r.district_id)+'" onclick="setAnalyticsDistrict(\''+esc(r.district_id)+'\')"><span>'+esc(r.district_title)+'</span><span>'+analyticsNum(r.school_count)+' مدرسه</span></button>').join('')+'</div>'+
+        '</aside>'+
+      '</div>';
+    analyticsRenderAll();
+  }catch(e){
+    main.innerHTML='<div class="analyticsPanel"><b>خطا در بارگذاری تحلیل</b><div style="color:var(--danger);margin-top:8px">'+esc(e.message||'خطای نامشخص')+'</div></div>';
+  }
+}
+function filterAnalyticsSchools(){analyticsRenderSchools(analyticsSchoolsRows());}
+async function loadAnalyticsCompany(){const id=document.getElementById('analyticsCompany')?.value;if(id)await api('/admin/analytics/company/'+id);}
+
 /* ==================== گزارش‌ها ==================== */
 async function renderReports() {
   const main = document.getElementById('main');
