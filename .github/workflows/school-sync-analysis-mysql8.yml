@@ -1,0 +1,24 @@
+name: school-sync-analysis-mysql8
+on:
+  push:
+    branches: [main]
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq php-cli php-mysql php-zip
+          docker run -d --name school-sync-db -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=school_sync mysql:8.0
+          until docker exec school-sync-db mysqladmin ping -uroot -proot --silent; do sleep 2; done
+          docker exec -i school-sync-db mysql -uroot -proot school_sync < h301194_school.sql
+          printf '%s\n' '<?php return [' "'db_host' => '127.0.0.1', 'db_name' => 'school_sync', 'db_user' => 'root', 'db_pass' => 'root'];" '];' > config.php
+          sed -i 's/127.0.0.1/127.0.0.1/' config.php
+          php tools/generate_school_sync_sql.php
+      - uses: actions/upload-artifact@v4
+        with:
+          name: school-sync-result
+          path: |
+            school_sync.sql
+            school_sync_audit.csv
