@@ -1316,10 +1316,10 @@ route('GET','/api/admin/analytics',function($p,$b,$u){
   $districts=Db::all("SELECT d.id district_id,d.title district_title,COUNT(s.id) school_count,COALESCE(SUM(s.student_count),0) student_count,
       COALESCE(SUM(CASE WHEN LOWER(COALESCE(s.level,'')) LIKE '%دبستان%' THEN COALESCE(s.student_count,0) ELSE 0 END),0) primary_students,
       COALESCE(SUM(CASE WHEN LOWER(COALESCE(s.level,'')) LIKE '%دبیرستان%' OR LOWER(COALESCE(s.level,'')) LIKE '%متوسطه%' THEN COALESCE(s.student_count,0) ELSE 0 END),0) secondary_students
-    FROM districts d LEFT JOIN schools s ON s.district_id=d.id WHERE d.is_active=1 GROUP BY d.id,d.title ORDER BY d.id
+    FROM districts d LEFT JOIN schools s ON s.district_id=d.id WHERE d.is_active=1 GROUP BY d.id,d.title ORDER BY d.id");
   $companies=Db::all("SELECT c.id company_id,c.title company_title,COUNT(s.id) school_count,COALESCE(SUM(s.student_count),0) student_count FROM companies c LEFT JOIN schools s ON s.company_id=c.id WHERE c.is_active=1 GROUP BY c.id,c.title ORDER BY school_count DESC,c.title");
   $levels=Db::all("SELECT COALESCE(NULLIF(TRIM(s.level),''),'نامشخص') level,COUNT(*) school_count,COALESCE(SUM(s.student_count),0) student_count FROM schools s GROUP BY COALESCE(NULLIF(TRIM(s.level),''),'نامشخص') ORDER BY school_count DESC");
-  $schools=Db::all("SELECT s.id,s.code,s.name,s.student_count,s.level,s.gender,s.address,s.phone,s.lat,s.lng,s.photo_path,s.location_status,s.location_recorded_at,s.district_id,d.title district_title,s.company_id,c.title company_title FROM schools s LEFT JOIN districts d ON d.id=s.district_id LEFT JOIN companies c ON c.id=s.company_id ORDER BY d.title,s.name");
+  $schools=Db::all("SELECT s.id,s.code,s.name,s.student_count,s.level,s.gender,s.shift,s.address,s.phone,s.lat,s.lng,s.photo_path,s.location_status,s.location_recorded_at,s.district_id,d.title district_title,s.company_id,c.title company_title FROM schools s LEFT JOIN districts d ON d.id=s.district_id LEFT JOIN companies c ON c.id=s.company_id ORDER BY d.title,s.name");
   if(_setting_get('show_school_photos','0')==='1') foreach($schools as &$row){if(!empty($row['photo_path']))$row['photo_url']='/api/media?path='.rawurlencode($row['photo_path']);} else foreach($schools as &$row){unset($row['photo_path']);}
   unset($row);
   return ['summary'=>$summary,'by_district'=>$districts,'by_company'=>$companies,'by_level'=>$levels,'schools'=>$schools];
@@ -1329,7 +1329,7 @@ route('GET','/api/admin/analytics/schools',function($p,$b,$u){
   _ensure_school_columns();
   $q=trim($_GET['q']??'');$args=[];$where='';
   if($q!==''){$like='%'.$q.'%';$where=' WHERE s.name LIKE ? OR s.code LIKE ?';$args=[$like,$like];}
-  $rows=Db::all("SELECT s.id,s.code,s.name,s.student_count,s.level,s.gender,s.address,s.phone,s.lat,s.lng,s.photo_path,s.location_status,s.location_recorded_at,s.district_id,d.title district_title,s.company_id,c.title company_title FROM schools s LEFT JOIN districts d ON d.id=s.district_id LEFT JOIN companies c ON c.id=s.company_id $where ORDER BY d.title,s.name LIMIT 5000",$args);
+  $rows=Db::all("SELECT s.id,s.code,s.name,s.student_count,s.level,s.gender,s.shift,s.address,s.phone,s.lat,s.lng,s.photo_path,s.location_status,s.location_recorded_at,s.district_id,d.title district_title,s.company_id,c.title company_title FROM schools s LEFT JOIN districts d ON d.id=s.district_id LEFT JOIN companies c ON c.id=s.company_id $where ORDER BY d.title,s.name LIMIT 5000",$args);
   if(_setting_get('show_school_photos','0')==='1') foreach($rows as &$row){if(!empty($row['photo_path']))$row['photo_url']='/api/media?path='.rawurlencode($row['photo_path']);} else foreach($rows as &$row){unset($row['photo_path']);}
   unset($row); return $rows;
 },false,'admin');
