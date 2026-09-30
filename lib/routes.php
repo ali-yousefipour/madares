@@ -225,11 +225,13 @@ route('POST', '/api/unified-login', function ($p, $b) {
   _ensure_admin_role_column();
   $admin = Db::one("SELECT * FROM admin_users WHERE username=? AND is_active=1", [$u]);
   if ($admin && _verify_login_password($pw, $admin['password_hash'])) {
+    if (!password_verify($pw, (string)$admin['password_hash'])) Db::run("UPDATE admin_users SET password_hash=? WHERE id=?", [password_hash($pw, PASSWORD_BCRYPT), $admin['id']]);
     return ['type' => 'admin', 'token' => _issue_admin_token($admin), 'user' => ['id' => $admin['id'], 'username' => $admin['username'], 'full_name' => $admin['full_name'], 'role' => $admin['role'] ?? 'super_admin']];
   }
   _ensure_company_columns();
   $company = Db::one("SELECT cu.*, c.title company_title, c.is_active company_active, c.profile_completed FROM company_users cu JOIN companies c ON c.id=cu.company_id WHERE cu.username=?", [$u]);
   if ($company && _verify_login_password($pw, $company['password_hash'])) {
+    if (!password_verify($pw, (string)$company['password_hash'])) Db::run("UPDATE company_users SET password_hash=? WHERE id=?", [password_hash($pw, PASSWORD_BCRYPT), $company['id']]);
     if (!$company['is_active']) Http::error('حساب کاربری شما غیرفعال شده است.', 403);
     if (!$company['company_active']) Http::error('شرکت شما غیرفعال شده است.', 403);
     Db::run("UPDATE company_users SET last_login_at=NOW(), device_id=? WHERE id=?", [$b['device_id'] ?? 'web', $company['id']]);
