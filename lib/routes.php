@@ -191,6 +191,7 @@ function _ensure_school_columns(){
     'shift2_end_time' => "VARCHAR(10) NULL",
     'driver_count' => "INT NULL",
     'gps_accuracy' => "DOUBLE NULL",
+    'is_active' => "TINYINT(1) NOT NULL DEFAULT 1",
   ];
   foreach ($cols as $name => $ddl) {
     try { if (!Db::one("SHOW COLUMNS FROM schools WHERE Field=?", [$name])) Db::run("ALTER TABLE schools ADD COLUMN `$name` $ddl"); }
@@ -415,7 +416,7 @@ route('PUT', '/api/company/profile', function ($p, $b, $u) {
 
 /* ==================== نواحی آموزش و پرورش ==================== */
 route('GET', '/api/admin/districts', fn($p, $b, $u) => Db::all(
-  "SELECT d.*, (SELECT COUNT(*) FROM schools s WHERE s.district_id=d.id) schools_count
+  "SELECT d.*, (SELECT COUNT(*) FROM schools s WHERE s.district_id=d.id AND s.is_active=1) schools_count
    FROM districts d ORDER BY d.title"), false, 'admin');
 
 route('GET', '/api/districts', fn($p, $b) => Db::all("SELECT id,title FROM districts WHERE is_active=1 ORDER BY title"), true);
@@ -763,8 +764,8 @@ route('GET', '/api/admin/companies', function($p, $b, $u) {
   _ensure_company_columns();
   return Db::all(
   "SELECT c.*, 
-      (SELECT COUNT(*) FROM schools s WHERE s.company_id=c.id) schools_count,
-      (SELECT COUNT(*) FROM schools s WHERE s.company_id=c.id AND s.location_status='done') done_count,
+      (SELECT COUNT(*) FROM schools s WHERE s.company_id=c.id AND s.is_active=1) schools_count,
+      (SELECT COUNT(*) FROM schools s WHERE s.company_id=c.id AND s.is_active=1 AND s.location_status='done') done_count,
       (SELECT COUNT(*) FROM company_users cu WHERE cu.company_id=c.id) users_count
    FROM companies c ORDER BY c.title");
 }, false, 'admin');
@@ -991,6 +992,7 @@ route('GET', '/api/admin/schools', function ($p, $b, $u) {
   if (!empty($_GET['district_id'])) { $conds[] = "s.district_id=?"; $args[] = (int)$_GET['district_id']; }
   if (!empty($_GET['company_id'])) { $conds[] = "s.company_id=?"; $args[] = (int)$_GET['company_id']; }
   if (!empty($_GET['status'])) { $conds[] = "s.location_status=?"; $args[] = $_GET['status']; }
+  if (isset($_GET['is_active']) && $_GET['is_active'] !== '') { $conds[] = "s.is_active=?"; $args[] = (int)$_GET['is_active']; }
   $where = $conds ? 'WHERE ' . implode(' AND ', $conds) : '';
   $page = max(1, (int)($_GET['page'] ?? 1)); $per = min(200, max(10, (int)($_GET['per'] ?? 30))); $off = ($page - 1) * $per;
   $total = (int)(Db::one("SELECT COUNT(*) n FROM schools s $where", $args)['n'] ?? 0);
@@ -1085,6 +1087,15 @@ _block_viewer($u);
   return ['ok' => true];
 }, false, 'admin');
 
+route('PUT', '/api/admin/schools/{id}/active', function ($p, $b, $u) {
+  _ensure_school_columns(); _block_viewer($u);
+  $active = !empty($b['is_active']) ? 1 : 0;
+  $id = (int)$p['id'];
+  $school = Db::one("SELECT id FROM schools WHERE id=?", [$id]);
+  if (!$school) Http::error('مدرسه یافت نشد', 404);
+  Db::run("UPDATE schools SET is_active=? WHERE id=?", [$active, $id]);
+  return ['ok'=>true,'id'=>$id,'is_active'=>$active];
+}, false, 'admin');
 route('DELETE', '/api/admin/schools/{id}', function ($p, $b, $u) {
 _block_viewer($u);
     Db::run("DELETE FROM schools WHERE id=?", [(int)$p['id']]);
@@ -1272,7 +1283,7 @@ route('GET', '/api/admin/schools/map', fn($p, $b, $u) => Db::all(
 // فهرست عمومی مدارس برای فرم ثبت‌نام/شکایت؛ شامل مدارس فاقد مختصات نیز می‌شود.
 route('GET', '/api/public/schools', function ($p, $b) {
   _ensure_school_columns();
-  $conds = ['1=1']; $args = [];
+  $conds = ['s.is_active=1']; $args = [];
   if (!empty($_GET['q'])) {
     $q = '%' . trim($_GET['q']) . '%';
     $conds[] = '(s.name LIKE ? OR s.code LIKE ?)';
@@ -1285,7 +1296,7 @@ route('GET', '/api/public/schools', function ($p, $b) {
 
 route('GET', '/api/public/schools/map', function ($p, $b) {
   _ensure_school_columns(); _ensure_company_columns();
-  $conds = ["s.lat IS NOT NULL", "s.lng IS NOT NULL"];
+  $conds = ["s.is_active=1", "s.lat IS NOT NULL", "s.lng IS NOT NULL"];
   $args = [];
   if (!empty($_GET['q'])) { $conds[] = "(s.name LIKE ? OR s.code LIKE ? OR s.address LIKE ?)"; $q = '%' . trim($_GET['q']) . '%'; array_push($args, $q, $q, $q); }
   if (!empty($_GET['district_id'])) { $conds[] = "s.district_id=?"; $args[] = (int)$_GET['district_id']; }
@@ -1311,14 +1322,14 @@ route('GET', '/api/public/company/{id}', function ($p, $b) {
 /* ==================== آمار و گزارش‌گیری ادمین ==================== */
 route('GET','/api/admin/analytics',function($p,$b,$u){
   _ensure_school_columns();
-  $summary=Db::one("SELECT (SELECT COUNT(*) FROM schools) total_schools,(SELECT COUNT(*) FROM companies WHERE is_active=1) total_companies,(SELECT COUNT(*) FROM districts WHERE is_active=1) total_districts,(SELECT COALESCE(SUM(student_count),0) FROM schools) total_students");
+  $summary=Db::one("SELECT (SELECT COUNT(*) FROM schools WHERE is_active=1) total_schools,(SELECT COUNT(*) FROM companies WHERE is_active=1) total_companies,(SELECT COUNT(*) FROM districts WHERE is_active=1) total_districts,(SELECT COALESCE(SUM(student_count),0) FROM schools WHERE is_active=1) total_students");
   $districts=Db::all("SELECT d.id district_id,d.title district_title,COUNT(s.id) school_count,COALESCE(SUM(s.student_count),0) student_count,
       COALESCE(SUM(CASE WHEN LOWER(COALESCE(s.level,'')) LIKE '%دبستان%' THEN COALESCE(s.student_count,0) ELSE 0 END),0) primary_students,
       COALESCE(SUM(CASE WHEN LOWER(COALESCE(s.level,'')) LIKE '%دبیرستان%' OR LOWER(COALESCE(s.level,'')) LIKE '%متوسطه%' THEN COALESCE(s.student_count,0) ELSE 0 END),0) secondary_students
-    FROM districts d LEFT JOIN schools s ON s.district_id=d.id WHERE d.is_active=1 GROUP BY d.id,d.title ORDER BY d.id");
-  $companies=Db::all("SELECT c.id company_id,c.title company_title,COUNT(s.id) school_count,COALESCE(SUM(s.student_count),0) student_count FROM companies c LEFT JOIN schools s ON s.company_id=c.id WHERE c.is_active=1 GROUP BY c.id,c.title ORDER BY school_count DESC,c.title");
-  $levels=Db::all("SELECT COALESCE(NULLIF(TRIM(s.level),''),'نامشخص') level,COUNT(*) school_count,COALESCE(SUM(s.student_count),0) student_count FROM schools s GROUP BY COALESCE(NULLIF(TRIM(s.level),''),'نامشخص') ORDER BY school_count DESC");
-  $schools=Db::all("SELECT s.id,s.code,s.name,s.student_count,s.level,s.gender,s.shift,s.address,s.phone,s.lat,s.lng,s.photo_path,s.location_status,s.location_recorded_at,s.district_id,d.title district_title,s.company_id,c.title company_title FROM schools s LEFT JOIN districts d ON d.id=s.district_id LEFT JOIN companies c ON c.id=s.company_id ORDER BY d.title,s.name");
+    FROM districts d LEFT JOIN schools s ON s.district_id=d.id AND s.is_active=1 WHERE d.is_active=1 GROUP BY d.id,d.title ORDER BY d.id");
+  $companies=Db::all("SELECT c.id company_id,c.title company_title,COUNT(s.id) school_count,COALESCE(SUM(s.student_count),0) student_count FROM companies c LEFT JOIN schools s ON s.company_id=c.id AND s.is_active=1 WHERE c.is_active=1 GROUP BY c.id,c.title ORDER BY school_count DESC,c.title");
+  $levels=Db::all("SELECT COALESCE(NULLIF(TRIM(s.level),''),'نامشخص') level,COUNT(*) school_count,COALESCE(SUM(s.student_count),0) student_count FROM schools s WHERE s.is_active=1 GROUP BY COALESCE(NULLIF(TRIM(s.level),''),'نامشخص') ORDER BY school_count DESC");
+  $schools=Db::all("SELECT s.id,s.code,s.name,s.student_count,s.level,s.gender,s.shift,s.address,s.phone,s.lat,s.lng,s.photo_path,s.location_status,s.location_recorded_at,s.district_id,d.title district_title,s.company_id,c.title company_title FROM schools s LEFT JOIN districts d ON d.id=s.district_id LEFT JOIN companies c ON c.id=s.company_id WHERE s.is_active=1 ORDER BY d.title,s.name");
   if(_setting_get('show_school_photos','0')==='1') foreach($schools as &$row){if(!empty($row['photo_path']))$row['photo_url']='/api/media?path='.rawurlencode($row['photo_path']);} else foreach($schools as &$row){unset($row['photo_path']);}
   unset($row);
   return ['summary'=>$summary,'by_district'=>$districts,'by_company'=>$companies,'by_level'=>$levels,'schools'=>$schools];
@@ -1326,7 +1337,7 @@ route('GET','/api/admin/analytics',function($p,$b,$u){
 
 route('GET','/api/admin/analytics/schools',function($p,$b,$u){
   _ensure_school_columns();
-  $q=trim($_GET['q']??'');$args=[];$where='';
+  $q=trim($_GET['q']??'');$args=[];$where=' WHERE s.is_active=1';
   if($q!==''){$like='%'.$q.'%';$where=' WHERE s.name LIKE ? OR s.code LIKE ?';$args=[$like,$like];}
   $rows=Db::all("SELECT s.id,s.code,s.name,s.student_count,s.level,s.gender,s.shift,s.address,s.phone,s.lat,s.lng,s.photo_path,s.location_status,s.location_recorded_at,s.district_id,d.title district_title,s.company_id,c.title company_title FROM schools s LEFT JOIN districts d ON d.id=s.district_id LEFT JOIN companies c ON c.id=s.company_id $where ORDER BY d.title,s.name LIMIT 5000",$args);
   if(_setting_get('show_school_photos','0')==='1') foreach($rows as &$row){if(!empty($row['photo_path']))$row['photo_url']='/api/media?path='.rawurlencode($row['photo_path']);} else foreach($rows as &$row){unset($row['photo_path']);}
@@ -1336,15 +1347,15 @@ route('GET','/api/admin/analytics/schools',function($p,$b,$u){
 route('GET','/api/admin/analytics/company/{id}',function($p,$b,$u){
   _ensure_school_columns();$id=(int)$p['id'];
   $company=Db::one("SELECT id,title FROM companies WHERE id=?",[$id]);if(!$company)Http::error('شرکت یافت نشد.',404);
-  $summary=Db::one("SELECT COUNT(*) school_count,COALESCE(SUM(s.student_count),0) student_count,COUNT(DISTINCT s.district_id) district_count FROM schools s WHERE s.company_id=?",[$id]);
-  $schools=Db::all("SELECT s.id,s.code,s.name,s.student_count,s.level,d.title district_title FROM schools s LEFT JOIN districts d ON d.id=s.district_id WHERE s.company_id=? ORDER BY d.title,s.name",[$id]);
+  $summary=Db::one("SELECT COUNT(*) school_count,COALESCE(SUM(s.student_count),0) student_count,COUNT(DISTINCT s.district_id) district_count FROM schools s WHERE s.company_id=? AND s.is_active=1",[$id]);
+  $schools=Db::all("SELECT s.id,s.code,s.name,s.student_count,s.level,d.title district_title FROM schools s LEFT JOIN districts d ON d.id=s.district_id WHERE s.company_id=? AND s.is_active=1 ORDER BY d.title,s.name",[$id]);
   return ['company'=>$company,'summary'=>$summary,'schools'=>$schools];
 },false,'admin');
 
 route('GET', '/api/admin/stats', function ($p, $b, $u) {
   _ensure_school_columns();
-  $total = (int)(Db::one("SELECT COUNT(*) n FROM schools")['n'] ?? 0);
-  $done = (int)(Db::one("SELECT COUNT(*) n FROM schools WHERE location_status='done'")['n'] ?? 0);
+  $total = (int)(Db::one("SELECT COUNT(*) n FROM schools WHERE is_active=1")['n'] ?? 0);
+  $done = (int)(Db::one("SELECT COUNT(*) n FROM schools WHERE is_active=1 AND location_status='done'")['n'] ?? 0);
   $companies = (int)(Db::one("SELECT COUNT(*) n FROM companies WHERE is_active=1")['n'] ?? 0);
   $districts = (int)(Db::one("SELECT COUNT(*) n FROM districts WHERE is_active=1")['n'] ?? 0);
   $reps = (int)(Db::one("SELECT COUNT(*) n FROM company_users WHERE is_active=1")['n'] ?? 0);
@@ -1352,13 +1363,13 @@ route('GET', '/api/admin/stats', function ($p, $b, $u) {
   $complaintsTotal = (int)(Db::one("SELECT COUNT(*) n FROM complaints")['n'] ?? 0);
   $topComplaintCompany = Db::one("SELECT c.id,c.title,COUNT(co.id) complaints_count FROM complaints co LEFT JOIN companies c ON c.id=co.company_id WHERE co.company_id IS NOT NULL GROUP BY c.id,c.title ORDER BY complaints_count DESC LIMIT 1");
   $bottomComplaintCompany = Db::one("SELECT c.id,c.title,COUNT(co.id) complaints_count FROM complaints co LEFT JOIN companies c ON c.id=co.company_id WHERE co.company_id IS NOT NULL GROUP BY c.id,c.title ORDER BY complaints_count ASC,c.title LIMIT 1");
-  $totalStudents = (int)(Db::one("SELECT COALESCE(SUM(student_count),0) n FROM schools")['n'] ?? 0);
-  $totalDrivers = (int)(Db::one("SELECT COALESCE(SUM(driver_count),0) n FROM schools")['n'] ?? 0);
+  $totalStudents = (int)(Db::one("SELECT COALESCE(SUM(student_count),0) n FROM schools WHERE is_active=1")['n'] ?? 0);
+  $totalDrivers = (int)(Db::one("SELECT COALESCE(SUM(driver_count),0) n FROM schools WHERE is_active=1")['n'] ?? 0);
   $byCompany = Db::all("SELECT c.id,c.title,
       COUNT(s.id) total, SUM(s.location_status='done') done
-    FROM companies c LEFT JOIN schools s ON s.company_id=c.id GROUP BY c.id, c.title ORDER BY total DESC");
+    FROM companies c LEFT JOIN schools s ON s.company_id=c.id AND s.is_active=1 GROUP BY c.id, c.title ORDER BY total DESC");
   $recent = Db::all("SELECT l.id, l.created_at, s.name school_name, s.code school_code, cu.full_name editor_name, c.title company_title
-    FROM school_visit_logs l JOIN schools s ON s.id=l.school_id JOIN company_users cu ON cu.id=l.company_user_id
+    FROM school_visit_logs l JOIN schools s ON s.id=l.school_id AND s.is_active=1 JOIN company_users cu ON cu.id=l.company_user_id
     JOIN companies c ON c.id=cu.company_id ORDER BY l.id DESC LIMIT 20");
   return ['total_schools' => $total, 'done' => $done, 'pending' => $total - $done, 'companies' => $companies,
     'districts' => $districts, 'reps' => $reps, 'total_students' => $totalStudents, 'total_drivers' => $totalDrivers,
@@ -1377,7 +1388,7 @@ route('GET', '/api/admin/reports/company/{id}', function ($p, $b, $u) {
     FROM company_users cu WHERE cu.company_id=? ORDER BY visits_count DESC", [$cid]);
   $schools = Db::all("SELECT s.id,s.code,s.name,s.location_status,s.location_recorded_at,d.title district_title,cu.full_name editor_name
     FROM schools s LEFT JOIN districts d ON d.id=s.district_id LEFT JOIN company_users cu ON cu.id=s.edited_by
-    WHERE s.company_id=? ORDER BY s.location_status, s.name", [$cid]);
+    WHERE s.company_id=? AND s.is_active=1 ORDER BY s.location_status, s.name", [$cid]);
   return ['company' => $company, 'per_user' => $perUser, 'schools' => $schools];
 }, false, 'admin');
 
@@ -1387,7 +1398,7 @@ route('GET', '/api/admin/reports/company/{id}/export', function ($p, $b, $u) {
   if (!$company) Http::error('یافت نشد', 404);
   $schools = Db::all("SELECT s.code,s.name,d.title district_title,s.location_status,s.lat,s.lng,s.location_recorded_at,cu.full_name editor_name
     FROM schools s LEFT JOIN districts d ON d.id=s.district_id LEFT JOIN company_users cu ON cu.id=s.edited_by
-    WHERE s.company_id=? ORDER BY s.name", [$cid]);
+    WHERE s.company_id=? AND s.is_active=1 ORDER BY s.name", [$cid]);
   $out=[]; foreach ($schools as $r) $out[]=[$r['code'], $r['name'], $r['district_title'], $r['location_status'] === 'done' ? 'ثبت‌شده' : 'باقی‌مانده', $r['lat'], $r['lng'], $r['location_recorded_at'], $r['editor_name']];
   _xlsx_download('company-report-'.$cid.'.xlsx',['کد مدرسه','نام مدرسه','ناحیه','وضعیت','عرض جغرافیایی','طول جغرافیایی','تاریخ ثبت','ثبت‌کننده'],$out,'گزارش عملکرد شرکت','گزارش عملکرد شرکت: '.($company['title']??''),'سازمان مدیریت و نظارت بر تاکسیرانی شهرداری مشهد مقدس');
 }, false, 'admin');
@@ -1400,14 +1411,14 @@ route('GET', '/api/schools/list', function ($p, $b, $u) {
   _ensure_company_capacity_tables();
   if (_setting_get('rep_can_view_school_list', '1') !== '1') Http::error('این قابلیت توسط مدیر سامانه غیرفعال شده است.', 403);
   return Db::all("SELECT s.id,s.code,s.name,s.location_status,s.level,s.gender,s.student_count,s.driver_count,d.title district_title,c.capacity_students,c.allowed_min_percent,c.allowed_max_percent FROM schools s
-    LEFT JOIN districts d ON d.id=s.district_id LEFT JOIN companies c ON c.id=s.company_id WHERE s.company_id=? ORDER BY s.name", [$u['company_id']]);
+    LEFT JOIN districts d ON d.id=s.district_id LEFT JOIN companies c ON c.id=s.company_id WHERE s.company_id=? AND s.is_active=1 ORDER BY s.name", [$u['company_id']]);
 }, false, 'company');
 
 route('GET', '/api/schools/search', function ($p, $b, $u) {
   $code = preg_replace('/\D/', '', (string)($_GET['code'] ?? ''));
   if (!$code) Http::error('کد مدرسه را وارد کنید', 400);
   $row = Db::one("SELECT s.*, d.title district_title FROM schools s LEFT JOIN districts d ON d.id=s.district_id
-    WHERE s.code=? AND s.company_id=?", [$code, $u['company_id']]);
+    WHERE s.code=? AND s.company_id=? AND s.is_active=1", [$code, $u['company_id']]);
   if (!$row) Http::error('مدرسه‌ای با این کد در فهرست شرکت شما یافت نشد', 404);
   if ($row['photo_path']) $row['photo_url'] = '/api/media?path=' . urlencode($row['photo_path']);
   return $row;
@@ -1415,7 +1426,7 @@ route('GET', '/api/schools/search', function ($p, $b, $u) {
 
 route('GET', '/api/schools/{id}', function ($p, $b, $u) {
   $row = Db::one("SELECT s.*, d.title district_title FROM schools s LEFT JOIN districts d ON d.id=s.district_id
-    WHERE s.id=? AND s.company_id=?", [(int)$p['id'], $u['company_id']]);
+    WHERE s.id=? AND s.company_id=? AND s.is_active=1", [(int)$p['id'], $u['company_id']]);
   if (!$row) Http::error('یافت نشد', 404);
   if ($row['photo_path']) $row['photo_url'] = '/api/media?path=' . urlencode($row['photo_path']);
   return $row;
@@ -1425,7 +1436,7 @@ route('GET', '/api/schools/{id}', function ($p, $b, $u) {
 route('POST', '/api/schools/{id}/location', function ($p, $b, $u) {
   _ensure_school_field_defs_table();
   $id = (int)$p['id'];
-  $school = Db::one("SELECT * FROM schools WHERE id=? AND company_id=?", [$id, $u['company_id']]);
+  $school = Db::one("SELECT * FROM schools WHERE id=? AND company_id=? AND is_active=1", [$id, $u['company_id']]);
   if (!$school) Http::error('این مدرسه در فهرست شرکت شما نیست', 404);
   $lat = $_POST['lat'] ?? null; $lng = $_POST['lng'] ?? null; $acc = $_POST['accuracy'] ?? null;
   if (!_valid_lat_lng($lat, $lng)) Http::error('موقعیت مکانی نامعتبر است', 400);
@@ -2374,7 +2385,7 @@ route('GET', '/api/public/service-cost', function ($p, $b) {
   $vehicleClass = preg_replace('/[^A-Za-z0-9_\-]/', '', (string)($_GET['vehicle_class'] ?? ''));
   $homeLat = (float)($_GET['home_lat'] ?? 0); $homeLng = (float)($_GET['home_lng'] ?? 0);
   if (!$schoolId || !$vehicleClass || !$homeLat || !$homeLng) Http::error('مدرسه، کلاس خودرو و مکان منزل الزامی است.', 400);
-  $school = Db::one("SELECT s.id,s.name,s.lat,s.lng,s.district_id,d.title district_title FROM schools s LEFT JOIN districts d ON d.id=s.district_id WHERE s.id=? AND s.lat IS NOT NULL AND s.lng IS NOT NULL", [$schoolId]);
+  $school = Db::one("SELECT s.id,s.name,s.lat,s.lng,s.district_id,d.title district_title FROM schools s LEFT JOIN districts d ON d.id=s.district_id WHERE s.id=? AND s.is_active=1 AND s.lat IS NOT NULL AND s.lng IS NOT NULL", [$schoolId]);
   if (!$school) Http::error('مدرسه یا موقعیت مدرسه یافت نشد.', 404);
   $route = _extract_route_summary(_neshan_route($homeLat, $homeLng, (float)$school['lat'], (float)$school['lng']));
   $oneWayKm = $route['distance_meters'] / 1000;
@@ -2619,7 +2630,7 @@ route('GET', '/api/admin/reports/full-export', function ($p, $b, $u) {
 }, false, 'admin');
 
 route('GET','/api/public/schools/{id}/company', function($p,$b){
-  $row=Db::one("SELECT s.id,s.name,s.code,s.address school_address,c.id company_id,c.title company_title,c.manager_name,c.phone,c.address company_address FROM schools s LEFT JOIN companies c ON c.id=s.company_id WHERE s.id=?",[(int)$p['id']]);
+  $row=Db::one("SELECT s.id,s.name,s.code,s.address school_address,c.id company_id,c.title company_title,c.manager_name,c.phone,c.address company_address FROM schools s LEFT JOIN companies c ON c.id=s.company_id WHERE s.id=? AND s.is_active=1",[(int)$p['id']]);
   if(!$row) Http::error('مدرسه یافت نشد.',404);
   return $row;
 }, true);
