@@ -921,10 +921,18 @@ function toggleSiteVisitCustom(){const c=document.getElementById('svGroup')?.val
 async function loadSiteVisits(){try{const g=document.getElementById('svGroup')?.value||'day';let q='?group='+encodeURIComponent(g);if(g==='custom'){const f=document.getElementById('svFrom').value.trim(),t=document.getElementById('svTo').value.trim();if(!f||!t)return toast('تاریخ شروع و پایان را وارد کنید.',true);q+='&from='+encodeURIComponent(f)+'&to='+encodeURIComponent(t)}const d=await api('/admin/site-visits'+q);document.getElementById('svKpis').innerHTML=[['کل بازدید صفحات',d.page_views],['بازدیدکننده یکتا',d.unique_visitors],['تعداد بازه‌های گزارش',d.rows.length],['بازه گزارش',d.from+' تا '+d.to]].map(x=>`<div class="siteVisitKpi"><div class="v">${typeof x[1]==='number'?siteVisitFaNum(x[1]):esc(x[1])}</div><div class="l">${x[0]}</div></div>`).join('');const max=Math.max(1,...d.rows.map(r=>Number(r.page_views)||0));document.getElementById('svChart').innerHTML=d.rows.length?d.rows.map(r=>{const h=Math.max(3,Math.round((r.page_views/max)*190));return `<div class="siteVisitBar" title="${esc(r.period)} — ${siteVisitFaNum(r.page_views)} بازدید"><i style="height:${h}px"></i><span>${esc(r.period)}</span></div>`}).join(''):'<div style="margin:auto;color:var(--muted)">داده‌ای برای این بازه ثبت نشده است.</div>';document.getElementById('svTable').innerHTML=`<table><thead><tr><th>بازه شمسی</th><th>تعداد بازدید</th><th>بازدیدکننده یکتا</th></tr></thead><tbody>${d.rows.map(r=>`<tr><td>${esc(r.period)}</td><td>${siteVisitFaNum(r.page_views)}</td><td>${siteVisitFaNum(r.unique_visitors)}</td></tr>`).join('')||'<tr><td colspan="3">داده‌ای ثبت نشده است.</td></tr>'}</tbody></table>`;}catch(e){toast(e.message,true)}}
 async function exportSiteVisits(){try{const g=document.getElementById('svGroup')?.value||'day';let q='?group='+encodeURIComponent(g);if(g==='custom'){const f=document.getElementById('svFrom').value.trim(),t=document.getElementById('svTo').value.trim();if(!f||!t)return toast('تاریخ شروع و پایان را وارد کنید.',true);q+='&from='+encodeURIComponent(f)+'&to='+encodeURIComponent(t)}const res=await fetch(API+'/admin/site-visits/export'+q,{headers:{Authorization:'Bearer '+TOKEN}});if(!res.ok){let d={};try{d=await res.json()}catch(e){}throw new Error(d.error||('خطا '+res.status))}const blob=await res.blob();const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='site-visits.xlsx';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){toast(e.message,true)}}
 
-async function renderSettings() {
+async function openAdminUsersFromSettings() {
+  if (ME && ME.role !== 'super_admin') {
+    toast('مدیریت کاربران و تعیین سطح دسترسی فقط برای مدیر کل سامانه فعال است.', true);
+    return;
+  }
+  goTab('adminUsers');
+}
+
+function renderSettings() {
   const main=document.getElementById('main'); main.classList.add('settingsPage');
   main.innerHTML = `<div class="settingsHero"><div><h1>تنظیمات سامانه</h1><p>مدیریت متمرکز ظاهر، اطلاعات پایه، دسترسی‌ها، نقشه، پیامک و تنظیمات فنی سامانه</p></div><div class="settingsHeroBadge"><i>⚙️</i> پنل مدیریت سیستم</div></div><div class="settingsSectionIntro"><div><h2>تنظیمات سامانه</h2><p>پیکربندی متمرکز سامانه؛ فقط بخش انتخاب‌شده را مدیریت کنید.</p></div></div>
-    ${ME && ME.role === 'super_admin' ? `<div class="panel settingsAdminUsersCard" style="max-width:900px">
+    <div class="panel settingsAdminUsersCard" style="max-width:900px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
         <div>
           <h3 style="margin-bottom:6px">👥 مدیریت کاربران و تعیین سطح دسترسی</h3>
@@ -932,9 +940,9 @@ async function renderSettings() {
             ایجاد، ویرایش، فعال/غیرفعال‌سازی کاربران مدیر سامانه و تعیین نقش و سطح دسترسی هر کاربر.
           </div>
         </div>
-        <button class="btn" onclick="goTab('adminUsers')">ورود به مدیریت کاربران و دسترسی‌ها</button>
+        <button class="btn" onclick="openAdminUsersFromSettings()">مدیریت کاربران و دسترسی‌ها</button>
       </div>
-    </div>` : ''}
+    </div>
 
     <div class="panel" style="max-width:520px">
       <h3>برندینگ سایت</h3>
