@@ -1313,7 +1313,10 @@ route('GET', '/api/public/company/{id}', function ($p, $b) {
 route('GET','/api/admin/analytics',function($p,$b,$u){
   _ensure_school_columns();
   $summary=Db::one("SELECT (SELECT COUNT(*) FROM schools) total_schools,(SELECT COUNT(*) FROM companies WHERE is_active=1) total_companies,(SELECT COUNT(*) FROM districts WHERE is_active=1) total_districts,(SELECT COALESCE(SUM(student_count),0) FROM schools) total_students");
-  $districts=Db::all("SELECT d.id district_id,d.title district_title,COUNT(s.id) school_count,COALESCE(SUM(s.student_count),0) student_count FROM districts d LEFT JOIN schools s ON s.district_id=d.id WHERE d.is_active=1 GROUP BY d.id,d.title ORDER BY school_count DESC,d.title");
+  $districts=Db::all("SELECT d.id district_id,d.title district_title,COUNT(s.id) school_count,COALESCE(SUM(s.student_count),0) student_count,
+      COALESCE(SUM(CASE WHEN LOWER(COALESCE(s.level,'')) LIKE '%دبستان%' THEN COALESCE(s.student_count,0) ELSE 0 END),0) primary_students,
+      COALESCE(SUM(CASE WHEN LOWER(COALESCE(s.level,'')) LIKE '%دبیرستان%' OR LOWER(COALESCE(s.level,'')) LIKE '%متوسطه%' THEN COALESCE(s.student_count,0) ELSE 0 END),0) secondary_students
+    FROM districts d LEFT JOIN schools s ON s.district_id=d.id WHERE d.is_active=1 GROUP BY d.id,d.title ORDER BY school_count DESC,d.title");
   $companies=Db::all("SELECT c.id company_id,c.title company_title,COUNT(s.id) school_count,COALESCE(SUM(s.student_count),0) student_count FROM companies c LEFT JOIN schools s ON s.company_id=c.id WHERE c.is_active=1 GROUP BY c.id,c.title ORDER BY school_count DESC,c.title");
   $levels=Db::all("SELECT COALESCE(NULLIF(TRIM(s.level),''),'نامشخص') level,COUNT(*) school_count,COALESCE(SUM(s.student_count),0) student_count FROM schools s GROUP BY COALESCE(NULLIF(TRIM(s.level),''),'نامشخص') ORDER BY school_count DESC");
   $schools=Db::all("SELECT s.id,s.code,s.name,s.student_count,s.level,s.district_id,d.title district_title,s.company_id,c.title company_title FROM schools s LEFT JOIN districts d ON d.id=s.district_id LEFT JOIN companies c ON c.id=s.company_id ORDER BY d.title,s.name");
