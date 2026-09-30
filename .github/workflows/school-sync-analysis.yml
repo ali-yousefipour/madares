@@ -12,7 +12,7 @@ jobs:
           sudo apt-get install -y -qq mariadb-server php-cli php-mysql php-zip
           sudo service mariadb start
           sudo mysql -e "CREATE DATABASE school_sync CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-          sudo mysql school_sync < h301194_school.sql
+          sudo mysql school_sync < <(cat h301194_school.sql | tr -d '\r')
           printf '%s\n' '<?php return [' "'db_host' => '127.0.0.1', 'db_name' => 'school_sync', 'db_user' => 'root', 'db_pass' => ''];" '];' > config.php
           php tools/generate_school_sync_sql.php
       - uses: actions/upload-artifact@v4
