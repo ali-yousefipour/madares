@@ -1778,12 +1778,23 @@ function analyticsRenderDonut(rows){
   const t=analyticsLevelTotals(rows), p=t.total?Math.round(t.primary/t.total*100):0;
   host.innerHTML='<div class="analyticsDonutWrap"><div class="analyticsDonut" style="--primary-p:'+p+'%"><div class="analyticsDonutCenter"><div><b>'+analyticsNum(t.total)+'</b>دانش‌آموز</div></div></div><div class="analyticsLegendList"><div class="analyticsLegendItem"><i style="background:#e6b12b"></i><div><b>'+analyticsNum(t.primary)+'</b>دبستان — '+p+'٪</div></div><div class="analyticsLegendItem"><i style="background:#12385d"></i><div><b>'+analyticsNum(t.secondary)+'</b>دبیرستان/متوسطه — '+analyticsPct(t.secondary,t.total)+'٪</div></div>'+(t.other?'<div class="analyticsLegendItem"><i style="background:#a8b3c1"></i><div><b>'+analyticsNum(t.other)+'</b>سایر — '+analyticsPct(t.other,t.total)+'٪</div></div>':'')+'</div></div>';
 }
-function analyticsRenderCompanies(rows){
+function analyticsRenderCompanies(){
   const host=document.getElementById('analyticsCompanyTable'); if(!host)return;
-  const source=(rows||[]).filter(r=>!ANALYTICS_FILTER_DISTRICT||true).slice(0,8);
-  const total=Number((ANALYTICS_CACHE?.summary||{}).total_schools||0);
-  host.innerHTML='<div class="analyticsCompanyMini"><table><thead><tr><th>#</th><th>نام شرکت</th><th>مدارس</th><th>دانش‌آموز</th><th>سهم</th></tr></thead><tbody>'+
-    source.map((r,i)=>'<tr><td>'+(i+1)+'</td><td><span class="analyticsDot"></span>'+esc(r.company_title||'بدون شرکت')+'</td><td>'+analyticsNum(r.school_count)+'</td><td>'+analyticsNum(r.student_count)+'</td><td class="analyticsShare">'+analyticsPct(r.school_count,total)+'٪</td></tr>').join('')+
+  const schools=analyticsSchoolsRows(), agg={};
+  schools.forEach(s=>{const key=String(s.company_id||'none');if(!agg[key])agg[key]={company_title:s.company_title||'بدون شرکت',school_count:0,student_count:0};agg[key].school_count++;agg[key].student_count+=Number(s.student_count||0);});
+  const source=Object.values(agg).sort((a,b)=>b.school_count-a.school_count||b.student_count-a.student_count).slice(0,8);
+  const total=schools.length||1;
+  host.innerHTML='<div class="analyticsCompanyMini"><table><thead><tr><th>#</th><th>نام شرکت</th><th>مدارس</th><th>دانش‌آموز</th><th>سهم از ناحیه</th></tr></thead><tbody>'+
+    source.map((r,i)=>'<tr><td>'+(i+1)+'</td><td><span class="analyticsDot"></span>'+esc(r.company_title)+'</td><td>'+analyticsNum(r.school_count)+'</td><td>'+analyticsNum(r.student_count)+'</td><td class="analyticsShare">'+analyticsPct(r.school_count,total)+'٪</td></tr>').join('')+
+    (source.length?'':'<tr><td colspan="5">شرکتی برای این محدوده ثبت نشده است.</td></tr>')+
+    '</tbody></table></div>';
+}
+function analyticsRenderSchoolTable(rows){
+  const host=document.getElementById('analyticsSchoolTable');if(!host)return;
+  const list=(rows||[]).slice(0,8);
+  host.innerHTML='<div class="analyticsCompanyMini"><table><thead><tr><th>ردیف</th><th>نام مدرسه</th><th>مقطع</th><th>جنسیت</th><th>دانش‌آموز</th></tr></thead><tbody>'+
+    list.map((s,i)=>'<tr onclick="selectAnalyticsSchool('+Number(s.id)+')" style="cursor:pointer"><td>'+Number(i+1)+'</td><td>'+esc(s.name||'—')+'</td><td>'+esc(s.level||'—')+'</td><td>'+esc(s.gender||'—')+'</td><td>'+analyticsNum(s.student_count)+'</td></tr>').join('')+
+    (list.length?'':'<tr><td colspan="5">مدرسه‌ای برای این محدوده ثبت نشده است.</td></tr>')+
     '</tbody></table></div>';
 }
 function analyticsRenderSchools(rows){
@@ -1809,7 +1820,7 @@ function setAnalyticsDistrict(id){
 }
 function analyticsRenderAll(){
   const rows=analyticsDistrictRows(),schools=analyticsSchoolsRows(),allDistricts=ANALYTICS_CACHE?.by_district||[];
-  analyticsRenderDistrictMap(rows);analyticsRenderLevelChart(rows.length?rows:allDistricts);analyticsRenderDonut(schools.length?schools:(ANALYTICS_CACHE?.schools||[]));analyticsRenderCompanies(ANALYTICS_CACHE?.by_company||[]);analyticsRenderSchools(schools);
+  analyticsRenderDistrictMap(rows);analyticsRenderLevelChart(rows.length?rows:allDistricts);analyticsRenderDonut(schools.length?schools:(ANALYTICS_CACHE?.schools||[]));analyticsRenderCompanies();analyticsRenderSchools(schools);analyticsRenderSchoolTable(schools);
   const countEl=document.getElementById('analyticsScopeCount');if(countEl)countEl.textContent=ANALYTICS_FILTER_DISTRICT?(rows[0]?.district_title||'ناحیه انتخاب‌شده'):'همه نواحی';
 }
 async function renderAnalytics(){
