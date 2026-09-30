@@ -1761,7 +1761,7 @@ function analyticsSchoolDetail(s){
 function analyticsRenderDistrictMap(){
   const host=document.getElementById('analyticsDistrictMap');if(!host)return;
   const all=ANALYTICS_CACHE?.by_district||[];
-  const list=Array.from({length:8},(_,i)=>all.find(x=>String(x.district_title||'').replace(/[^\d]/g,'')===String(i+1))||all[i]);
+  const list=[...all].sort((a,b)=>Number(a.district_id)-Number(b.district_id)).slice(0,8);
   host.innerHTML='<div class="analyticsMapCenter">مشهد<br><span style="font-size:9px">توزیع مدارس</span></div>'+
     list.map((r,i)=>r?'<button class="analyticsDistrictShape '+(i%2?'gold':'blue')+' '+(String(r.district_id)===String(ANALYTICS_FILTER_DISTRICT)?'active':'')+'" data-d="'+(i+1)+'" onclick="setAnalyticsDistrict(\''+esc(r.district_id)+'\')">ناحیه '+esc((r.district_title||'').replace(/ناحیه\s*/,'')||String(i+1))+'<small style="display:block;font-size:8px;margin-top:2px">'+analyticsNum(r.school_count)+' مدرسه</small></button>':'').join('')+
     '<div class="analyticsDistrictLegend">'+all.slice(0,8).map(r=>'<div><span>'+esc(r.district_title||'نامشخص')+'</span><b>'+analyticsNum(r.student_count)+' نفر</b></div>').join('')+'</div>';
@@ -1770,7 +1770,8 @@ function analyticsRenderLevelChart(rows){
   const host=document.getElementById('analyticsLevelChart');if(!host)return;
   if(!rows.length){host.innerHTML='<div class="analyticsEmpty">داده‌ای برای نمایش وجود ندارد.</div>';return;}
   const max=Math.max(1,...rows.map(r=>Math.max(Number(r.primary_students||0),Number(r.secondary_students||0))));
-  host.innerHTML=rows.slice(0,8).map((r,i)=>{const p=Number(r.primary_students||0),s=Number(r.secondary_students||0),ph=Math.max(3,Math.round(p/max*285)),sh=Math.max(3,Math.round(s/max*285));return '<div class="analyticsBarGroup"><div class="analyticsBar primary" style="height:'+ph+'px"><span class="analyticsBarValue">'+analyticsNum(p)+'</span></div><div class="analyticsBar secondary" style="height:'+sh+'px"><span class="analyticsBarValue">'+analyticsNum(s)+'</span></div><span class="analyticsBarLabel">ناحیه '+esc((r.district_title||'').replace(/ناحیه\s*/,'')||String(i+1))+'</span></div>';}).join('');
+  const ordered=[...rows].sort((a,b)=>Number(a.district_id)-Number(b.district_id));
+  host.innerHTML=ordered.slice(0,8).map((r,i)=>{const p=Number(r.primary_students||0),s=Number(r.secondary_students||0),ph=Math.max(3,Math.round(p/max*285)),sh=Math.max(3,Math.round(s/max*285));return '<div class="analyticsBarGroup"><div class="analyticsBar primary" style="height:'+ph+'px"><span class="analyticsBarValue">'+analyticsNum(p)+'</span></div><div class="analyticsBar secondary" style="height:'+sh+'px"><span class="analyticsBarValue">'+analyticsNum(s)+'</span></div><span class="analyticsBarLabel">ناحیه '+esc((r.district_title||'').replace(/ناحیه\s*/,'')||String(i+1))+'</span></div>';}).join('');
 }
 function analyticsRenderDonut(rows){
   const host=document.getElementById('analyticsDonutBox');if(!host)return;
@@ -1848,7 +1849,7 @@ async function renderAnalytics(){
           '<div class="analyticsFiltersTitle">نمایش بر اساس <span>📍</span></div>'+
           '<div class="analyticsFiltersLabel">انتخاب ناحیه</div>'+
           '<select id="analyticsDistrictSelect" onchange="setAnalyticsDistrict(this.value)"><option value="">همه نواحی</option>'+districts.map(r=>'<option value="'+esc(r.district_id)+'">'+esc(r.district_title)+'</option>').join('')+'</select>'+
-          '<div class="analyticsDistrictList">'+districts.slice(0,8).map(r=>'<button class="analyticsDistrictBtn" data-id="'+esc(r.district_id)+'" onclick="setAnalyticsDistrict(\''+esc(r.district_id)+'\')"><span>‹ '+esc(r.district_title)+'</span><span>'+analyticsNum(r.school_count)+' مدرسه</span></button>').join('')+'</div>'+
+          '<div class="analyticsDistrictList">'+[...districts].sort((a,b)=>Number(a.district_id)-Number(b.district_id)).slice(0,8).map(r=>'<button class="analyticsDistrictBtn" data-id="'+esc(r.district_id)+'" onclick="setAnalyticsDistrict(\''+esc(r.district_id)+'\')"><span>‹ '+esc(r.district_title)+'</span><span>'+analyticsNum(r.school_count)+' مدرسه</span></button>').join('')+'</div>'+
         '</aside>'+
       '</div>';
     analyticsRenderAll();
