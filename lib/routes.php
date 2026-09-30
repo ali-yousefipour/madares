@@ -774,7 +774,7 @@ route('GET', '/api/admin/companies/export', function($p,$b,$u){
   _ensure_company_columns(); _ensure_company_field_defs_table();
   $q=trim((string)($_GET['q']??'')); $args=[]; $where='';
   if($q!==''){$where='WHERE c.title LIKE ? OR c.manager_name LIKE ? OR c.ceo_mobile LIKE ? OR c.phone LIKE ? OR c.address LIKE ?';$qq='%'.$q.'%';$args=[$qq,$qq,$qq,$qq,$qq];}
-  $rows=Db::all("SELECT c.*, (SELECT COUNT(*) FROM schools s WHERE s.company_id=c.id) schools_count,(SELECT COUNT(*) FROM schools s WHERE s.company_id=c.id AND s.location_status='done') done_count,(SELECT COUNT(*) FROM company_users cu WHERE cu.company_id=c.id) users_count FROM companies c $where ORDER BY c.title",$args);
+  $rows=Db::all("SELECT c.*, (SELECT COUNT(*) FROM schools s WHERE s.company_id=c.id AND s.is_active=1) schools_count,(SELECT COUNT(*) FROM schools s WHERE s.company_id=c.id AND s.is_active=1 AND s.location_status='done') done_count,(SELECT COUNT(*) FROM company_users cu WHERE cu.company_id=c.id) users_count FROM companies c $where ORDER BY c.title",$args);
   $defs=Db::all("SELECT field_key,label FROM company_field_defs WHERE is_active=1 ORDER BY sort_order,id");
   $headers=['شناسه','نام شرکت','نام مدیرعامل','تلفن همراه مدیرعامل','تلفن ثابت','آدرس','ظرفیت دانش‌آموز','درصد کاهش مجاز','درصد افزایش مجاز','عرض جغرافیایی','طول جغرافیایی','تعداد مدارس','مدارس ثبت‌شده','تعداد نمایندگان','وضعیت','تکمیل پروفایل'];
   $builtin=['title','manager_name','ceo_mobile','phone','address','lat','lng']; foreach($defs as $d){if(!in_array($d['field_key'],$builtin,true))$headers[]=$d['label'];}
@@ -1252,6 +1252,7 @@ route('GET', '/api/admin/schools/export', function ($p, $b, $u) {
   $conds=[]; $args=[];
   if(!empty($_GET['district_id'])){$conds[]='s.district_id=?';$args[]=(int)$_GET['district_id'];}
   if(!empty($_GET['company_id'])){$conds[]='s.company_id=?';$args[]=(int)$_GET['company_id'];}
+  $conds[]='s.is_active=1';
   if(!empty($_GET['status'])){$conds[]='s.location_status=?';$args[]=$_GET['status'];}
   if(!empty($_GET['q'])){$conds[]='(s.name LIKE ? OR s.code LIKE ?)';$q='%'.$_GET['q'].'%';$args[]=$q;$args[]=$q;}
   $where=$conds?'WHERE '.implode(' AND ',$conds):'';
@@ -1277,7 +1278,7 @@ route('GET', '/api/admin/schools/map', fn($p, $b, $u) => Db::all(
   "SELECT s.id,s.code,s.name,s.lat,s.lng,s.location_status,s.level,s.student_count,s.driver_count,s.address,s.photo_path,
       c.title company_title,d.title district_title
    FROM schools s LEFT JOIN companies c ON c.id=s.company_id LEFT JOIN districts d ON d.id=s.district_id
-   WHERE s.lat IS NOT NULL AND s.lng IS NOT NULL"), false, 'admin');
+   WHERE s.is_active=1 AND s.lat IS NOT NULL AND s.lng IS NOT NULL"), false, 'admin');
 
 // نقشه و جستجوی عمومی مدارس برای صفحهٔ اول سایت
 // فهرست عمومی مدارس برای فرم ثبت‌نام/شکایت؛ شامل مدارس فاقد مختصات نیز می‌شود.
@@ -1482,8 +1483,8 @@ route('GET', '/api/my/visits', function ($p, $b, $u) {
 }, false, 'company');
 
 route('GET', '/api/my/stats', function ($p, $b, $u) {
-  $total = (int)(Db::one("SELECT COUNT(*) n FROM schools WHERE company_id=?", [$u['company_id']])['n'] ?? 0);
-  $done = (int)(Db::one("SELECT COUNT(*) n FROM schools WHERE company_id=? AND location_status='done'", [$u['company_id']])['n'] ?? 0);
+  $total = (int)(Db::one("SELECT COUNT(*) n FROM schools WHERE company_id=? AND is_active=1", [$u['company_id']])['n'] ?? 0);
+  $done = (int)(Db::one("SELECT COUNT(*) n FROM schools WHERE company_id=? AND is_active=1 AND location_status='done'", [$u['company_id']])['n'] ?? 0);
   $mine = (int)(Db::one("SELECT COUNT(DISTINCT school_id) n FROM school_visit_logs WHERE company_user_id=?", [$u['id']])['n'] ?? 0);
   return ['company_total' => $total, 'company_done' => $done, 'company_pending' => $total - $done, 'my_visited' => $mine];
 }, false, 'company');
@@ -2619,9 +2620,9 @@ route('GET', '/api/admin/reports/full-export', function ($p, $b, $u) {
       (SELECT COUNT(*) FROM company_users cu WHERE cu.company_id=c.id) uc FROM companies c ORDER BY c.title");
   foreach($companies as $c) $rows[]=['شرکت‌ها',$c['title'],$c['manager_name'],$c['phone'],$c['address'],$c['is_active']?'فعال':'غیرفعال',$c['sc'],$c['dc'],$c['uc']];
   foreach(Db::all("SELECT cu.*, c.title company_title FROM company_users cu JOIN companies c ON c.id=cu.company_id ORDER BY c.title, cu.full_name") as $r) $rows[]=['نمایندگان',$r['full_name'],$r['username'],$r['phone'],$r['company_title'],$r['is_active']?'فعال':'غیرفعال',$r['last_login_at'],'',''];
-  foreach(Db::all("SELECT d.*, (SELECT COUNT(*) FROM schools s WHERE s.district_id=d.id) sc FROM districts d ORDER BY d.title") as $d) $rows[]=['نواحی',$d['title'],$d['sc'],$d['is_active']?'فعال':'','','','','',''];
+  foreach(Db::all("SELECT d.*, (SELECT COUNT(*) FROM schools s WHERE s.district_id=d.id AND s.is_active=1) sc FROM districts d ORDER BY d.title") as $d) $rows[]=['نواحی',$d['title'],$d['sc'],$d['is_active']?'فعال':'','','','','',''];
   $customDefs=Db::all("SELECT field_key,label FROM school_field_defs WHERE is_active=1 ORDER BY sort_order");
-  foreach(Db::all("SELECT s.*, d.title district_title, c.title company_title FROM schools s LEFT JOIN districts d ON d.id=s.district_id LEFT JOIN companies c ON c.id=s.company_id ORDER BY s.name") as $x){
+  foreach(Db::all("SELECT s.*, d.title district_title, c.title company_title FROM schools s LEFT JOIN districts d ON d.id=s.district_id LEFT JOIN companies c ON c.id=s.company_id WHERE s.is_active=1 ORDER BY s.name") as $x){
     $row=['مدارس',$x['code'],$x['name'],$x['district_title'],$x['company_title'],$x['gender'],$x['shift'],$x['level'],$x['school_type'],$x['start_time'],$x['end_time'],$x['shift1_start_time'],$x['shift1_end_time'],$x['shift2_start_time'],$x['shift2_end_time'],$x['driver_count'],$x['student_count'],$x['address'],$x['phone'],$x['principal_name'],$x['lat'],$x['lng'],$x['location_status']==='done'?'ثبت‌شده':'باقی‌مانده',$x['location_recorded_at']];
     $cf=json_decode($x['custom_fields']??'{}',true)?:[]; foreach($customDefs as $cd) $row[]=$cf[$cd['field_key']]??''; $rows[]=$row;
   }
