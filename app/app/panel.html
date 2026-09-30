@@ -492,7 +492,7 @@ async function boot() {
   document.getElementById('publicView').classList.add('hidden');
   document.getElementById('loginView').classList.add('hidden');
   document.getElementById('appView').classList.remove('hidden');
-  if (ME.role === 'super_admin') { document.getElementById('navAdminUsers').classList.remove('hidden'); document.getElementById('navSiteVisits').classList.remove('hidden'); }
+  if (ME.role === 'super_admin') { document.getElementById('navSiteVisits').classList.remove('hidden'); }
   await refreshLookups();
   goTab('dashboard');
 }
