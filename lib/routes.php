@@ -219,19 +219,25 @@ function _ensure_school_columns(){
    حساب متعلق به مدیر سامانه (admin_users، شامل تمام نقش‌ها) است یا نمایندهٔ شرکت (company_users)؛
    دیگر نیازی به انتخاب دستی «ورود مدیران» یا «ورود شرکت‌ها» از سوی کاربر نیست. ---------------- */
 route('POST', '/api/unified-login', function ($p, $b) {
-  $u = _normalize_login_username($b['username'] ?? ''); $pw = (string)($b['password'] ?? '');
+  $raw_u = trim((string)($b['username'] ?? ''));
+  $u = _normalize_login_username($raw_u); $pw = (string)($b['password'] ?? '');
   if (!$u || !$pw) Http::error('نام کاربری و رمز عبور را وارد کنید', 400);
   _rate_limit('unified_login_' . _client_ip() . '_' . $u, 10, 900);
   _ensure_admin_role_column();
+  // Preserve compatibility with legacy usernames stored using Persian/Arabic digits.
   $admin = Db::one("SELECT * FROM admin_users WHERE username=? AND is_active=1", [$u]);
+  if (!$admin && $raw_u !== $u) $admin = Db::one("SELECT * FROM admin_users WHERE username=? AND is_active=1", [$raw_u]);
   if (!$admin) $admin = Db::one("SELECT * FROM admin_users WHERE TRIM(username)=? AND is_active=1", [$u]);
+  if (!$admin && $raw_u !== $u) $admin = Db::one("SELECT * FROM admin_users WHERE TRIM(username)=? AND is_active=1", [$raw_u]);
   if ($admin && _verify_login_password($pw, $admin['password_hash'])) {
     if (!password_verify($pw, (string)$admin['password_hash'])) Db::run("UPDATE admin_users SET password_hash=? WHERE id=?", [password_hash($pw, PASSWORD_BCRYPT), $admin['id']]);
     return ['type' => 'admin', 'token' => _issue_admin_token($admin), 'user' => ['id' => $admin['id'], 'username' => $admin['username'], 'full_name' => $admin['full_name'], 'role' => $admin['role'] ?? 'super_admin']];
   }
   _ensure_company_columns();
   $company = Db::one("SELECT cu.*, c.title company_title, c.is_active company_active, c.profile_completed FROM company_users cu JOIN companies c ON c.id=cu.company_id WHERE cu.username=?", [$u]);
+  if (!$company && $raw_u !== $u) $company = Db::one("SELECT cu.*, c.title company_title, c.is_active company_active, c.profile_completed FROM company_users cu JOIN companies c ON c.id=cu.company_id WHERE cu.username=?", [$raw_u]);
   if (!$company) $company = Db::one("SELECT cu.*, c.title company_title, c.is_active company_active, c.profile_completed FROM company_users cu JOIN companies c ON c.id=cu.company_id WHERE TRIM(cu.username)=?", [$u]);
+  if (!$company && $raw_u !== $u) $company = Db::one("SELECT cu.*, c.title company_title, c.is_active company_active, c.profile_completed FROM company_users cu JOIN companies c ON c.id=cu.company_id WHERE TRIM(cu.username)=?", [$raw_u]);
   if ($company && _verify_login_password($pw, $company['password_hash'])) {
     if (!password_verify($pw, (string)$company['password_hash'])) Db::run("UPDATE company_users SET password_hash=? WHERE id=?", [password_hash($pw, PASSWORD_BCRYPT), $company['id']]);
     if (!$company['is_active']) Http::error('حساب کاربری شما غیرفعال شده است.', 403);
@@ -249,10 +255,12 @@ route('POST', '/api/unified-login', function ($p, $b) {
 
 route('POST', '/api/admin/login', function ($p, $b) {
   _ensure_admin_role_column();
-  $u = _normalize_login_username($b['username'] ?? ''); $pw = (string)($b['password'] ?? '');
+  $raw_u = trim((string)($b['username'] ?? ''));
+  $u = _normalize_login_username($raw_u); $pw = (string)($b['password'] ?? '');
   if (!$u || !$pw) Http::error('نام کاربری و رمز عبور را وارد کنید', 400);
   _rate_limit('admin_login_' . _client_ip() . '_' . $u, 8, 900);
   $row = Db::one("SELECT * FROM admin_users WHERE username=? AND is_active=1", [$u]);
+  if (!$row && $raw_u !== $u) $row = Db::one("SELECT * FROM admin_users WHERE username=? AND is_active=1", [$raw_u]);
   if (!$row || !_verify_login_password($pw, $row['password_hash'])) Http::error('نام کاربری یا رمز عبور اشتباه است', 401);
   return ['token' => _issue_admin_token($row), 'user' => ['id' => $row['id'], 'username' => $row['username'], 'full_name' => $row['full_name'], 'role' => $row['role'] ?? 'super_admin']];
 }, true);
