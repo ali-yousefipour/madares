@@ -2615,8 +2615,8 @@ route('POST', '/api/auth/reset-password', function ($p, $b) {
 route('GET', '/api/admin/reports/full-export', function ($p, $b, $u) {
   _ensure_school_columns(); _ensure_school_field_defs_table();
   $rows=[];
-  $companies=Db::all("SELECT c.*, (SELECT COUNT(*) FROM schools s WHERE s.company_id=c.id) sc,
-      (SELECT COUNT(*) FROM schools s WHERE s.company_id=c.id AND s.location_status='done') dc,
+  $companies=Db::all("SELECT c.*, (SELECT COUNT(*) FROM schools s WHERE s.company_id=c.id AND s.is_active=1) sc,
+      (SELECT COUNT(*) FROM schools s WHERE s.company_id=c.id AND s.is_active=1 AND s.location_status='done') dc,
       (SELECT COUNT(*) FROM company_users cu WHERE cu.company_id=c.id) uc FROM companies c ORDER BY c.title");
   foreach($companies as $c) $rows[]=['شرکت‌ها',$c['title'],$c['manager_name'],$c['phone'],$c['address'],$c['is_active']?'فعال':'غیرفعال',$c['sc'],$c['dc'],$c['uc']];
   foreach(Db::all("SELECT cu.*, c.title company_title FROM company_users cu JOIN companies c ON c.id=cu.company_id ORDER BY c.title, cu.full_name") as $r) $rows[]=['نمایندگان',$r['full_name'],$r['username'],$r['phone'],$r['company_title'],$r['is_active']?'فعال':'غیرفعال',$r['last_login_at'],'',''];
