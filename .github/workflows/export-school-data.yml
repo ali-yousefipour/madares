@@ -10,4 +10,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: school-source-data
-          path: new data.xlsx
+          path: |
+            new data.xlsx
+            h301194_school.sql
