@@ -12,186 +12,22 @@ jobs:
           python-version: '3.12'
       - name: Prepare
         run: pip install openpyxl
-      - name: Generate authoritative correction SQL
+      - name: Inspect new data workbook
         run: |
           python - <<'PY'
-          import openpyxl,re,unicodedata,difflib,csv,os,math
-          from collections import defaultdict
-          X='new data.xlsx'
-          import subprocess
-          def q(v):
-            if v is None: return 'NULL'
-            return "'" + str(v).replace('\\','\\\\').replace("'","''") + "'"
-          def norm(v):
-            if v is None:return ''
-            s=str(v).strip().lower()
-            s=str.maketrans({'ي':'ی','ى':'ی','ك':'ک','ۀ':'ه','ة':'ه','ؤ':'و','إ':'ا','أ':'ا','ٱ':'ا','‌':' ','ـ':' '})
-            s=str(v).translate(s)
-            s=unicodedata.normalize('NFKC',s)
-            s=re.sub(r'[\u064b-\u065f\u0670]','',s)
-            s=re.sub(r'[\s\-_/]+','',s)
-            return s
-          def distkey(v):
-            s=norm(v)
-            m=re.search(r'\d+',s)
-            return str(int(m.group())) if m else s
-          def sim(a,b): return difflib.SequenceMatcher(None,norm(a),norm(b)).ratio()
-          def parse_int(v):
-            if v is None or str(v).strip()=='': return 0
-            s=str(v).replace(',','').replace('٬','').strip()
-            fa=str.maketrans('۰۱۲۳۴۵۶۷۸۹','0123456789'); s=s.translate(fa)
-            m=re.search(r'[-+]?\d+(?:\.\d+)?',s)
-            return int(float(m.group())) if m else 0
-          # Parse DB dump directly.
-          dump=open('h301194_school.sql',encoding='utf-8',errors='replace').read()
-          def tuples(sql):
-            out=[]; buf=''; qv=False; esc=False; depth=0
-            for ch in sql:
-              if qv:
-                buf+=ch
-                if esc: esc=False
-                elif ch=='\\\\': esc=True
-                elif ch==chr(39): qv=False
-              else:
-                if ch==chr(39): qv=True; buf+=ch
-                elif ch=='(': depth+=1; buf+=ch
-                elif ch==')':
-                  depth-=1; buf+=ch
-                  if depth==0: out.append(buf); buf=''
-                elif depth>0: buf+=ch
-            return out
-          def parsevals(t):
-            x=t[1:-1]; vals=[]; buf=''; qv=False; esc=False
-            for ch in x:
-              if qv:
-                buf+=ch
-                if esc: esc=False
-                elif ch=='\\\\': esc=True
-                elif ch==chr(39): qv=False
-              else:
-                if ch==chr(39): qv=True; buf+=ch
-                elif ch==',': vals.append(buf.strip()); buf=''
-                else: buf+=ch
-            vals.append(buf.strip())
-            def cv(v):
-              if v.upper()=='NULL': return None
-              if len(v)>=2 and v[0]==chr(39) and v[-1]==chr(39): return v[1:-1].replace(chr(39)*2,chr(39))
-              return v
-            return [cv(v) for v in vals]
-          def table_rows(table):
-            tick=chr(96)
-            m=re.search(r'INSERT INTO\\s+'+tick+'?'+table+tick+'?'+r'\\s*\\((.*?)\\)\\s*VALUES\\s*(.*?);',dump,re.I|re.S)
-            if not m:return []
-            names=[x.strip().strip(tick) for x in m.group(1).split(',')]
-            return [dict(zip(names,parsevals(t))) for t in tuples(m.group(2))]
-          districts=table_rows('districts')
-          companies=table_rows('companies')
-          schools=table_rows('schools')
-          districts=[{k:r.get(k) for k in ['id','title','is_active']} for r in districts]
-          companies=[{k:r.get(k) for k in ['id','title','is_active']} for r in companies]
-          schools=[{k:r.get(k) for k in ['id','code','name','district_id','company_id','level','student_count','is_active']} for r in schools]
-          dmap={distkey(r['title']):int(r['id']) for r in districts if r['is_active']!='0'}
-          cmap={norm(r['title']):int(r['id']) for r in companies if r['is_active']!='0'}
-          # The authoritative reconciliation sheet is همه_مدارس_Excel.
-          wb=openpyxl.load_workbook(X,data_only=True,read_only=True)
-          ws=wb[wb.sheetnames[0]]
-          rows=list(ws.iter_rows(values_only=True))
-          header=[str(v).strip() if v is not None else '' for v in rows[0]]
-          def ci(names):
-            nn={norm(x) for x in names}
-            for i,h in enumerate(header):
-              if norm(h) in nn:return i
-            return None
-          idxs={'code':ci(['کد مدرسه','کد','school code']),'name':ci(['نام Excel','نام مدرسه','نام','school name']),'district':ci(['ناحیه','district']),'level':ci(['مقطع Excel','مقطع','مقطع تحصیلی','level']),'company':ci(['شرکت Excel','شرکت','شرکت سرویس','company']),'students':ci(['تعداد دانش‌آموز','تعداد دانش آموز','student count']),'gender':None,'shift':None,'type':None}
-          excel=[]
-          for row in rows[1:]:
-            get=lambda k: row[idxs[k]] if idxs[k] is not None and idxs[k]<len(row) else None
-            name=get('name'); district=get('district')
-            if not name or not district or str(name).strip()=='None': continue
-            excel.append({'sheet':ws.title,'code':get('code'),'name':str(name).strip(),'district':str(district).strip(),'level':str(get('level') or '').strip(),'company':str(get('company') or '').strip(),'students':parse_int(get('students')),'gender':None,'shift':None,'type':None})
-          print('AUTHORITATIVE_HEADER',header)
-          print('AUTHORITATIVE_ROWS',len(excel))
-          print('AUTHORITATIVE_STUDENTS',sum(e['students'] for e in excel))
-          # Deduplicate exact duplicate Excel rows only; same school name with different level/company remains distinct.
-          seen_excel=set(); clean=[]
-          for e in excel:
-            k=(norm(e['name']),distkey(e['district']),norm(e['level']),norm(e['company']),e['students'])
-            if k not in seen_excel: seen_excel.add(k); clean.append(e)
-          excel=clean
-          bycode=defaultdict(list); bykey=defaultdict(list)
-          for s in schools:
-            bycode[norm(s['code'])].append(s)
-            # district title
-            dt=next((d['title'] for d in districts if s['district_id'] and int(d['id'])==int(s['district_id'])),'')
-            bykey[(norm(s['name']),distkey(dt),norm(s['level']))].append(s)
-          used=set(); matches=[]; inserts=[]; audit=[]
-          for i,e in enumerate(excel,1):
-            cand=[]
-            code=norm(e['code'])
-            if code and code in bycode:
-              cand=[s for s in bycode[code] if norm(s['name'])==norm(e['name'])]
-            if not cand:
-              cand=[s for s in bykey[(norm(e['name']),distkey(e['district']),norm(e['level']))] if int(s['id']) not in used]
-            if len(cand)>1:
-              scored=[]
-              for s in cand:
-                comp=sim(e['company'],next((c['title'] for c in companies if int(c['id'])==int(s['company_id'])),''))
-                stu=1/(1+abs(parse_int(s['student_count'])-e['students']))
-                scored.append((comp*0.65+stu*0.35,s))
-              scored.sort(key=lambda x:x[0],reverse=True)
-              if len(scored)==1 or scored[0][0]-scored[1][0]>=0.15: cand=[scored[0][1]]
-              else: cand=[]
-            if not cand:
-              # fuzzy fallback constrained by district and level family
-              fc=[]
-              for s in schools:
-                if int(s['id']) in used: continue
-                dt=next((d['title'] for d in districts if s['district_id'] and int(d['id'])==int(s['district_id'])),'')
-                if distkey(dt)!=distkey(e['district']): continue
-                ns=sim(e['name'],s['name']); ls=sim(e['level'],s['level'])
-                if ns>=0.88 and ls>=0.45: fc.append((ns*0.8+ls*0.2,s))
-              fc.sort(key=lambda x:x[0],reverse=True)
-              if fc and (len(fc)==1 or fc[0][0]-fc[1][0]>=0.04): cand=[fc[0][1]]
-            if cand:
-              s=cand[0]; used.add(int(s['id'])); matches.append((e,s)); audit.append(['matched',e['sheet'],e['name'],e['district'],e['level'],e['students'],s['id'],s['name']])
-            else:
-              inserts.append(e); audit.append(['new',e['sheet'],e['name'],e['district'],e['level'],e['students'],'',''])
-          total=sum(e['students'] for e in excel)
-          print('EXCEL_ROWS',len(excel)); print('EXCEL_STUDENTS',total); print('MATCHED',len(matches)); print('NEW',len(inserts)); print('DB_ROWS',len(schools)); print('DB_ACTIVE',sum(int(s['is_active']) for s in schools)); print('DB_STUDENTS',sum(parse_int(s['student_count']) for s in schools if int(s['is_active'])))
-          os.makedirs('correction',exist_ok=True)
-          with open('correction/audit.csv','w',newline='',encoding='utf-8-sig') as f:
-            w=csv.writer(f); w.writerow(['status','sheet','name','district','level','students','db_id','db_name']); w.writerows(audit)
-          lines=['SET NAMES utf8mb4;','START TRANSACTION;','-- Excel authoritative school master','UPDATE schools SET is_active=0;']
-          used_codes={norm(s['code']) for s in schools}
-          for e,s in matches:
-            did=dmap.get(distkey(e['district'])); cid=None
-            if e['company']:
-              exact=cmap.get(norm(e['company']))
-              if exact: cid=exact
-              else:
-                best=max(((sim(e['company'],c['title']),int(c['id'])) for c in companies if c['is_active']!='0'),default=(0,None))
-                if best[0]>=0.86: cid=best[1]
-            sets=[f"name={q(e['name'])}",f"district_id={did if did is not None else 'NULL'}",f"company_id={cid if cid is not None else 'NULL'}",f"level={q(e['level'])}",f"student_count={e['students']}",'is_active=1']
-            if e['gender'] not in (None,''): sets.append(f"gender={q(e['gender'])}")
-            if e['shift'] not in (None,''): sets.append(f"shift={q(e['shift'])}")
-            lines.append(f"UPDATE schools SET {','.join(sets)} WHERE id={int(s['id'])};")
-          newcodes=set(used_codes)
-          for e in inserts:
-            code=str(e['code']).strip() if e['code'] not in (None,'') else ''
-            code=re.sub(r'\.0$','',code)
-            if not code or norm(code) in newcodes:
-              base='X'+str(abs(hash((e['name'],e['district'],e['level'],e['company'])))%100000000)
-              code=base[:10]
-              while norm(code) in newcodes: code='X'+str((int(code[1:])+1)%100000000)
-            newcodes.add(norm(code))
-            did=dmap.get(distkey(e['district'])); cid=cmap.get(norm(e['company'])) if e['company'] else None
-            vals=[q(code),q(e['name']),str(did if did is not None else 'NULL'),str(cid if cid is not None else 'NULL'),q(e['gender']) if e['gender'] not in (None,'') else 'NULL',q(e['shift']) if e['shift'] not in (None,'') else 'NULL',q(e['level']),q(e['type']) if e['type'] not in (None,'') else 'NULL',str(e['students']),'1']
-            lines.append("INSERT INTO schools (code,name,district_id,company_id,gender,shift,level,school_type,student_count,is_active) VALUES ("+','.join(vals)+");")
-          lines += ["-- Final verification","SELECT COUNT(*) AS active_schools,COALESCE(SUM(student_count),0) AS active_students FROM schools WHERE is_active=1;","COMMIT;"]
-          open('correction/school_data_correction.sql','w',encoding='utf-8').write('\n'.join(lines)+'\n')
-          open('correction/README.txt','w',encoding='utf-8').write(f'Excel schools: {len(excel)}\nExcel students: {total}\nMatched DB schools: {len(matches)}\nNew schools: {len(inserts)}\nAfter import active schools: {len(excel)}\nAfter import active students: {total}\n')
+          import openpyxl,json
+          x='new data.xlsx'; wb=openpyxl.load_workbook(x,data_only=True,read_only=True)
+          out={}
+          for ws in wb.worksheets:
+            rows=[]
+            for i,r in enumerate(ws.iter_rows(values_only=True)):
+              if i>=8: break
+              rows.append(list(r))
+            out[ws.title]={'max_row':ws.max_row,'max_col':ws.max_column,'rows':rows}
+          json.dump(out,open('workbook-inspect.json','w',encoding='utf8'),ensure_ascii=False,indent=2)
+          print(json.dumps(out,ensure_ascii=False)[:12000])
           PY
       - uses: actions/upload-artifact@v4
         with:
           name: school-data-correction
-          path: correction/
+          path: workbook-inspect.json
