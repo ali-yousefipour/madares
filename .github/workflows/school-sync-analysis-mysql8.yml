@@ -81,6 +81,7 @@ jobs:
             for r in rows[hi+1:]:
               if len(r)<=max(ni,si or 0) or not r[ni]:continue
               excel.append({'name':str(r[ni]).strip(),'level':str(r[li] or '').strip(),'students':parse_num(r[si] if si is not None else 0),'company':str(r[ci] or '').strip(),'district':dk,'sheet':ws.title})
+          print('SHEET_TOTALS', {k:sum(e['students'] for e in excel if e['sheet']==k) for k in sorted(set(e['sheet'] for e in excel))})
           # Excel has 1135 school rows. Keep every row as a distinct authoritative school.
           used=set(); matches=[]; new=[]
           for e in excel:
