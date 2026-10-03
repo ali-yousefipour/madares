@@ -1,4 +1,6 @@
 name: Analyze school reconciliation data
+permissions:
+  contents: write
 on:
   pull_request:
     types: [opened, synchronize, reopened]
@@ -184,10 +186,26 @@ jobs:
           out['reconciliation']['stored_integer_students']=sum(stored_students)
           out['reconciliation']['fractional_excel_rows']=sum(abs(v-round(v))>1e-9 for v in raw_students)
           out['reconciliation']['sql_file']='school_reconciliation.sql'
+          special=[r for r in db_rows if r.get('district_id')=='11']
+          md=['# گزارش نهایی تطبیق مدارس','',f'- ردیف‌های Excel: {len(excel_rows)}',f'- مدارس تطبیق‌یافته با DB: {len(matched)}',f'- مدارس جدید قابل ثبت: {len(new_rows)}',f'- مدارس DB برای غیرفعال‌سازی: {len(inactive)}',f'- مدارس DB با ناحیه «خاص» که در Excel پیدا نشدند و در نتیجه غیرفعال می‌شوند: {len(special)}',f'- مجموع خام دانش‌آموز Excel: {sum(raw_students):.2f}',f'- مجموع صحیح قابل ذخیره در ستون INT: {sum(stored_students)}',f'- ردیف‌های دارای مقدار اعشاری دانش‌آموز: {sum(abs(v-round(v))>1e-9 for v in raw_students)}','', '## مدارس با ناحیه خاص که در Excel یافت نشدند','']
+          for d in special: md.append(f"- ID {d['id']} — {d.get('name')} — مقطع: {d.get('level') or '-'}")
+          md += ['', '## مدارس جدید','']
+          for nrow in new_rows: md.append(f"- {nrow['row'][3]} | {nrow['row'][2]} | {nrow['row'][4] or '-'} | {nrow['row'][6] or '-'} | دانش‌آموز ذخیره‌شده: {stored_students[nrow['excel_index']]}")
+          open('analysis/school_reconciliation_report.md','w',encoding='utf-8').write('\n'.join(md)+'\n')
           os.makedirs('analysis',exist_ok=True)
           json.dump(out,open('analysis/reconciliation.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
           open('analysis/summary.json','w',encoding='utf-8').write(json.dumps(out,ensure_ascii=False,indent=2))
           PY
+      - name: Commit generated reconciliation files
+        if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add analysis/school_reconciliation.sql analysis/school_reconciliation_report.md
+          if ! git diff --cached --quiet; then
+            git commit -m "Generate school reconciliation SQL [skip ci]"
+            git push origin HEAD:${{ github.head_ref }}
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: reconciliation-analysis
