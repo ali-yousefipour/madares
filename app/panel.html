@@ -1737,10 +1737,19 @@ let ANALYTICS_SELECTED_COMPANY=null;
 let ANALYTICS_SELECTED_SCHOOL=null;
 function analyticsNum(v){return Number(v||0).toLocaleString('fa-IR');}
 function analyticsPct(v,total){return total?Math.round(Number(v||0)/Number(total||1)*100):0;}
+function analyticsNormalizeLevel(value){
+  const t=String(value??'').trim()
+    .replace(/[يى]/g,'ی').replace(/[ك]/g,'ک')
+    .replace(/\s+/g,'');
+  if(!t)return '';
+  if(/^(ابتدایی|ابتدای|دبستان|دبستانی|ابتداییه)$/.test(t))return 'ابتدایی';
+  if(/^(متوسطه|راهنمایی|دبیرستان|متوسطهاول|متوسطهدوم|متوسطهاول|متوسطهدوم)$/.test(t))return 'متوسطه';
+  return t;
+}
 function analyticsLevelTotals(rows){
   let primary=0,secondary=0,other=0;
   (rows||[]).forEach(r=>{
-    const n=Number(r.student_count||0),lv=String(r.level||'').trim();
+    const n=Number(r.student_count)||0,lv=analyticsNormalizeLevel(r.level);
     if(lv==='ابتدایی') primary+=n;
     else if(lv==='متوسطه') secondary+=n;
     else other+=n;
@@ -1979,15 +1988,20 @@ function analyticsRenderLevelChart(rows){
   analyticsSchoolsRows().forEach(s=>{
     const id=analyticsDistrictNumber(s);
     if(!grouped[id])grouped[id]={primary:0,secondary:0};
-    const n=Number(s.student_count||0),lv=String(s.level||'').trim();
+    const n=Number(s.student_count)||0,lv=analyticsNormalizeLevel(s.level);
     if(lv==='ابتدایی')grouped[id].primary+=n;
     else if(lv==='متوسطه')grouped[id].secondary+=n;
   });
-  const vals=districts.map(r=>({r,p:Number(grouped[String(r.district_id)]?.primary||0),s:Number(grouped[String(r.district_id)]?.secondary||0)}));
+  const vals=districts.map(r=>{
+    const key=analyticsDistrictNumber(r);
+    const g=grouped[key]||{primary:0,secondary:0};
+    return {r,p:g.primary,s:g.secondary};
+  });
   const max=Math.max(1,...vals.map(x=>Math.max(x.p,x.s)));
   host.innerHTML=vals.slice(0,8).map((x,i)=>{
     const ph=Math.max(3,Math.round(x.p/max*285)),sh=Math.max(3,Math.round(x.s/max*285));
-    return '<div class="analyticsBarGroup"><div class="analyticsBar primary" style="height:'+ph+'px"><span class="analyticsBarValue">'+analyticsNum(x.p)+'</span></div><div class="analyticsBar secondary" style="height:'+sh+'px"><span class="analyticsBarValue">'+analyticsNum(x.s)+'</span></div><span class="analyticsBarLabel">'+esc(String(x.r.district_title||'').replace(/ناحیه\s*/,'')||String(i+1))+'</span></div>';
+    const label=String(x.r.district_title||'').replace(/^\s*(?:ناحیه|منطقه)\s*/,'').trim()||String(i+1);
+    return '<div class="analyticsBarGroup"><div class="analyticsBar primary" style="height:'+ph+'px"><span class="analyticsBarValue">'+analyticsNum(x.p)+'</span></div><div class="analyticsBar secondary" style="height:'+sh+'px"><span class="analyticsBarValue">'+analyticsNum(x.s)+'</span></div><span class="analyticsBarLabel">'+esc(label)+'</span></div>';
   }).join('');
 }
 function analyticsRenderDonut(rows){
