@@ -124,6 +124,10 @@ jobs:
             hint=r[9] if len(r)>9 else None
             if hint is not None and int(hint) in db_by_id and r[7]=='انجام شد':
               d=db_by_id[int(hint)]; matched[i]={'db_id':int(hint),'score':1.0,'method':'previous_report_db_id','name_score':sim(excel_name,d.get('name')),'level_score':level_score(excel_level,d.get('level')),'company_score':sim(excel_company,company_by_id.get(int(d['company_id']),{}).get('title')) if d.get('company_id') and str(d.get('company_id')).isdigit() else 0,'district_ok':str(d.get('district_id'))==str(excel_dist_id)}; used.add(int(hint)); continue
+            exact=[d for d in db_rows if d.get('id') and str(d['id']).isdigit() and int(d['id']) not in used and n(d.get('name'))==norm(excel_name) and excel_dist_id is not None and d.get('district_id') and str(d.get('district_id'))==str(excel_dist_id)]
+            if len(exact)==1:
+              d=exact[0]; matched[i]={'db_id':int(d['id']),'score':1.0,'method':'exact_name_district','name_score':1.0,'level_score':level_score(excel_level,d.get('level')),'company_score':0,'district_ok':True}; used.add(int(d['id'])); continue
+              d=db_by_id[int(hint)]; matched[i]={'db_id':int(hint),'score':1.0,'method':'previous_report_db_id','name_score':sim(excel_name,d.get('name')),'level_score':level_score(excel_level,d.get('level')),'company_score':sim(excel_company,company_by_id.get(int(d['company_id']),{}).get('title')) if d.get('company_id') and str(d.get('company_id')).isdigit() else 0,'district_ok':str(d.get('district_id'))==str(excel_dist_id)}; used.add(int(hint)); continue
             candidates=[]
             for d in db_rows:
               if not d.get('id') or not str(d['id']).isdigit() or int(d['id']) in used: continue
@@ -146,6 +150,39 @@ jobs:
           new_rows=[{'excel_index':i,'row':r} for i,r in enumerate(excel_rows) if i not in matched]
           inactive=[int(r['id']) for r in db_rows if r.get('id') and str(r['id']).isdigit() and int(r['id']) not in used]
           out['reconciliation']={'excel_count':len(excel_rows),'matched_count':len(matched),'new_count':len(new_rows),'ambiguous_count':len(ambiguous),'db_count':len(db_rows),'deactivate_count':len(inactive),'excel_students':sum(int(r[5] or 0) for r in excel_rows),'matched_db_ids':sorted(used),'new_rows':new_rows,'ambiguous':ambiguous,'inactive_db_ids':inactive,'company_matches':company_cache,'districts':district_title_by_id}
+          raw_students=[float(r[5] or 0) for r in excel_rows]
+          target_students=int(round(sum(raw_students)))
+          floors=[int(v) for v in raw_students]
+          add=target_students-sum(floors)
+          order=sorted(range(len(raw_students)),key=lambda i:(raw_students[i]-floors[i]),reverse=True)
+          stored_students=floors[:]
+          for j in order[:max(0,add)]: stored_students[j]+=1
+          def sqlq(v):
+            if v is None: return 'NULL'
+            if isinstance(v,bool): return '1' if v else '0'
+            if isinstance(v,(int,float)): return str(v)
+            return chr(39)+str(v).replace(chr(39),chr(39)*2)+chr(39)
+          existing_codes={str(r.get('code')) for r in db_rows if r.get('code')}
+          new_codes={}
+          def make_code(i,r):
+            base=1000000000+(int(hashlib.sha256((str(r[3])+'|'+str(r[2])+'|'+str(r[4])+'|'+str(i)).encode('utf-8')).hexdigest()[:12],16)%9000000000)
+            code=str(base)
+            while code in existing_codes or code in new_codes.values(): base=1000000000+((int(base)-1000000000+1)%9000000000); code=str(base)
+            new_codes[i]=code; return code
+          lines=['-- Excel is authoritative for the school master data.','-- Generated from h301194_school.sql and گزارش_تطبیق_دقیق_مدارس_و_شرکتها.xlsx','START TRANSACTION;','UPDATE schools SET is_active=0;']
+          for i,m in sorted(matched.items()):
+            r=excel_rows[i]; d=db_by_id[m['db_id']]; cm=company_cache.get(norm(r[6]),{'id':None}) if r[6] else {'id':None}
+            cid=cm.get('id')
+            lines.append('UPDATE schools SET name='+sqlq(r[3])+', district_id='+sqlq(excel_dist_id if (excel_dist_id:=district_by_title.get(norm(r[2]))) is not None else None)+', company_id='+sqlq(cid)+', level='+sqlq(r[4])+', student_count='+str(stored_students[i])+', is_active=1 WHERE id='+str(m['db_id'])+';')
+          for nrow in new_rows:
+            i=nrow['excel_index']; r=nrow['row']; did=district_by_title.get(norm(r[2])); cm=company_cache.get(norm(r[6]),{'id':None}) if r[6] else {'id':None}; code=make_code(i,r)
+            lines.append('INSERT INTO schools (code,name,district_id,company_id,level,student_count,is_active) VALUES ('+','.join([sqlq(code),sqlq(r[3]),sqlq(did),sqlq(cm.get('id')),sqlq(r[4]),str(stored_students[i]),'1'])+');')
+          lines += ['','-- Verification: active school count and student total must match the Excel row count and rounded integer student total.','SELECT COUNT(*) AS active_school_count, COALESCE(SUM(student_count),0) AS active_student_total FROM schools WHERE is_active=1;','COMMIT;']
+          open('analysis/school_reconciliation.sql','w',encoding='utf-8').write('\n'.join(lines)+'\n')
+          out['reconciliation']['raw_excel_students']=sum(raw_students)
+          out['reconciliation']['stored_integer_students']=sum(stored_students)
+          out['reconciliation']['fractional_excel_rows']=sum(abs(v-round(v))>1e-9 for v in raw_students)
+          out['reconciliation']['sql_file']='school_reconciliation.sql'
           os.makedirs('analysis',exist_ok=True)
           json.dump(out,open('analysis/reconciliation.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
           open('analysis/summary.json','w',encoding='utf-8').write(json.dumps(out,ensure_ascii=False,indent=2))
