@@ -29,7 +29,7 @@ jobs:
             creates.append({'table':m.group(1),'definition':m.group(2)[:20000]})
           inserts={}
           for m in re.finditer(r'INSERT INTO\\s+[`]?([^\\s`(]+)[`]?',s,re.I): inserts[m.group(1)]=inserts.get(m.group(1),0)+1
-          out['sql']={'file':sf,'bytes':len(s.encode()),'tables':creates,'insert_statements':inserts,'school_related_tables':[x['table'] for x in creates if re.search(r'school|madres|student|school',x['table'],re.I)]}
+          out['sql']={'file':sf,'bytes':len(s.encode()),'tables':creates,'insert_statements':inserts,'school_related_tables':[x['table'] for x in creates if re.search(r'school|madres|student',x['table'],re.I)],'head':s[:5000],'tail':s[-5000:],'keywords':{k:len(re.findall(k,s,re.I)) for k in ['CREATE','INSERT','UPDATE','VALUES','school','student','district','students']}}
           os.makedirs('analysis',exist_ok=True)
           json.dump(out,open('analysis/summary.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
           PY
