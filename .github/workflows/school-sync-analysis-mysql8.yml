@@ -82,6 +82,16 @@ jobs:
               if len(r)<=max(ni,si or 0) or not r[ni]:continue
               excel.append({'name':str(r[ni]).strip(),'level':str(r[li] or '').strip(),'students':parse_num(r[si] if si is not None else 0),'company':str(r[ci] or '').strip(),'district':dk,'sheet':ws.title})
           print('SHEET_TOTALS', {k:sum(e['students'] for e in excel if e['sheet']==k) for k in sorted(set(e['sheet'] for e in excel))})
+          bad=[]
+          for ws in wb.worksheets:
+            rows=list(ws.iter_rows(values_only=True)); hi=next((i for i,r in enumerate(rows) if any(str(v).strip()=='مدرسه' for v in r if v is not None)),None)
+            if hi is None: continue
+            h=list(rows[hi]); si=next((i for i,v in enumerate(h) if v and 'تعداد دانش' in str(v)),None)
+            if si is None: continue
+            for rn,r in enumerate(rows[hi+1:],hi+2):
+              if len(r)>si and r[0] not in (None,'') and r[si] not in (None,'') and parse_num(r[si])==0: bad.append([ws.title,rn,r[0],r[si],type(r[si]).__name__])
+          print('BAD_STUDENT_VALUES',bad[:100])
+
           # Excel has 1135 school rows. Keep every row as a distinct authoritative school.
           used=set(); matches=[]; new=[]
           for e in excel:
