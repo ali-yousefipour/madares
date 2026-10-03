@@ -30,7 +30,7 @@ jobs:
           inserts={}
           for m in re.finditer(r'INSERT INTO\\s+[`]?([^\\s`(]+)[`]?',s,re.I): inserts[m.group(1)]=inserts.get(m.group(1),0)+1
           def extract_insert(table):
-            m=re.search(r'INSERT INTO\\s+'+re.escape(table)+r'\\s*\\((.*?)\\)\\s*VALUES\\s*(.*?);',s,re.I|re.S)
+            tick=chr(96); m=re.search(r'INSERT INTO\\s+'+tick+'?'+re.escape(table)+tick+'?'+r'\\s*\\((.*?)\\)\\s*VALUES\\s*(.*?);',s,re.I|re.S)
             return m
           def split_rows(v):
             rows=[]; buf=[]; q=False; esc=False; depth=0; i=0
