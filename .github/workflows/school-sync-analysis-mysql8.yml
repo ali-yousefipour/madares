@@ -83,6 +83,15 @@ jobs:
               if len(r)<=max(ni,si or 0) or not r[ni]:continue
               excel.append({'name':str(r[ni]).strip(),'level':str(r[li] or '').strip(),'students':(int(float(r[si])) if si is not None and isinstance(r[si],(int,float)) else parse_num(r[si] if si is not None else 0)),'company':str(r[ci] or '').strip(),'district':dk,'sheet':ws.title})
           print('SHEET_TOTALS', {k:sum(e['students'] for e in excel if e['sheet']==k) for k in sorted(set(e['sheet'] for e in excel))})
+          raw_sheet={}
+          for ws0 in wb.worksheets:
+            rr=list(ws0.iter_rows(values_only=True)); hh=next((i for i,r in enumerate(rr) if any(str(v).strip()=='مدرسه' for v in r if v is not None)),None)
+            if hh is None: continue
+            hhv=list(rr[hh]); ss=next((i for i,v in enumerate(hhv) if v and 'تعداد دانش' in str(v)),None)
+            if ss is None: continue
+            raw_sheet[ws0.title]=sum(float(r[ss]) for r in rr[hh+1:] if len(r)>ss and r[0] not in (None,'') and r[ss] not in (None,'' ) and isinstance(r[ss],(int,float)))
+          print('RAW_SHEET_FLOAT',raw_sheet,'RAW_TOTAL_FLOAT',sum(raw_sheet.values()))
+
           bad=[]
           for ws in wb.worksheets:
             rows=list(ws.iter_rows(values_only=True)); hi=next((i for i,r in enumerate(rows) if any(str(v).strip()=='مدرسه' for v in r if v is not None)),None)
