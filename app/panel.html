@@ -1922,7 +1922,7 @@ async function renderAnalytics(){
         '<aside class="analyticsFilters">'+
           '<div class="analyticsFiltersTitle">نمایش بر اساس <span>📍</span></div>'+
           '<div class="analyticsFiltersLabel">انتخاب ناحیه</div>'+
-          '<select id="analyticsDistrictSelect" onchange="setAnalyticsDistrict(this.value)"><option value="">همه نواحی</option>'+districts.map(r=>'<option value="'+esc(r.district_id)+'">'+esc(r.district_title)+'</option>').join('')+'</select>'+
+          '<select id="analyticsDistrictSelect" onchange="setAnalyticsDistrict(this.value)"><option value="">همه نواحی</option>'+[...districts].sort((a,b)=>analyticsDistrictSortKey(a)-analyticsDistrictSortKey(b)).map(r=>'<option value="'+esc(r.district_id)+'">'+esc(r.district_title)+'</option>').join('')+'</select>'+
           '<div class="analyticsDistrictList">'+[...districts].sort((a,b)=>Number(a.district_id)-Number(b.district_id)).slice(0,8).map(r=>'<button class="analyticsDistrictBtn" data-id="'+esc(r.district_id)+'" onclick="setAnalyticsDistrict(\''+esc(r.district_id)+'\')"><span>‹ '+esc(r.district_title)+'</span><span>'+analyticsNum(r.school_count)+' مدرسه</span></button>').join('')+'</div>'+
         '</aside>'+
       '</div>';
