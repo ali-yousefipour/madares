@@ -160,7 +160,7 @@ jobs:
               fc=[]
               for s in schools:
                 if int(s['id']) in used: continue
-                dt=next((d['title'] for d in districts if int(d['id'])==int(s['district_id']) if s['district_id'] else False),'')
+                dt=next((d['title'] for d in districts if s['district_id'] and int(d['id'])==int(s['district_id'])),'')
                 if distkey(dt)!=distkey(e['district']): continue
                 ns=sim(e['name'],s['name']); ls=sim(e['level'],s['level'])
                 if ns>=0.88 and ls>=0.45: fc.append((ns*0.8+ls*0.2,s))
