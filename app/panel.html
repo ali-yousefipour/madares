@@ -1814,22 +1814,22 @@ const ANALYTICS_REFERENCE_DISTRICT_POLYGONS={
  * نقاط به‌صورت [lat,lng] هستند.
  */
 "tabadkan":[
-  [36.3985,59.4580],
-  [36.4200,59.4850],
-  [36.4470,59.5150],
-  [36.4720,59.5550],
-  [36.4930,59.6050],
-  [36.5050,59.6650],
-  [36.5150,59.7300],
-  [36.5000,59.7850],
-  [36.4750,59.8200],
-  [36.4380,59.8050],
-  [36.4100,59.7700],
-  [36.4000,59.7200],
-  [36.3980,59.6650],
-  [36.3975,59.6050],
-  [36.3978,59.5400],
-  [36.3980,59.4900]
+  // لبهٔ جنوبی تبادکان با لبهٔ شمالی نواحی ۷، ۴ و ۱ هم‌تراز است.
+  [36.3990,59.4580],
+  [36.3990,59.4950],
+  [36.3925,59.5500],
+  [36.3800,59.5880],
+  [36.3830,59.6280],
+  [36.3765,59.6870],
+  [36.3765,59.7240],
+  [36.4050,59.7480],
+  [36.4380,59.7600],
+  [36.4680,59.7420],
+  [36.4900,59.7000],
+  [36.5000,59.6500],
+  [36.4950,59.5900],
+  [36.4750,59.5350],
+  [36.4450,59.4900]
 ]};
 function analyticsDistrictNumber(r){
   const raw=String(r?.district_title||'');
@@ -1982,7 +1982,7 @@ async function renderAnalytics(){
           '<div class="analyticsFiltersTitle">نمایش بر اساس <span>📍</span></div>'+
           '<div class="analyticsFiltersLabel">انتخاب ناحیه</div>'+
           '<select id="analyticsDistrictSelect" onchange="setAnalyticsDistrict(this.value)"><option value="">همه نواحی</option>'+[...districts].sort((a,b)=>analyticsDistrictSortKey(a)-analyticsDistrictSortKey(b)).map(r=>'<option value="'+esc(r.district_id)+'">'+esc(r.district_title)+'</option>').join('')+'</select>'+
-          '<div class="analyticsDistrictList">'+[...districts].sort((a,b)=>Number(a.district_id)-Number(b.district_id)).slice(0,8).map(r=>'<button class="analyticsDistrictBtn" data-id="'+esc(r.district_id)+'" onclick="setAnalyticsDistrict(\''+esc(r.district_id)+'\')"><span>‹ '+esc(r.district_title)+'</span><span>'+analyticsNum(r.school_count)+' مدرسه</span></button>').join('')+'</div>'+
+          '<div class="analyticsDistrictList">'+[...districts].sort((a,b)=>analyticsDistrictSortKey(a)-analyticsDistrictSortKey(b)).slice(0,8).map(r=>'<button class="analyticsDistrictBtn" data-id="'+esc(r.district_id)+'" onclick="setAnalyticsDistrict(\''+esc(r.district_id)+'\')"><span>‹ '+esc(r.district_title)+'</span><span>'+analyticsNum(r.school_count)+' مدرسه</span></button>').join('')+'</div>'+
         '</aside>'+
       '</div>';
     analyticsRenderAll();
