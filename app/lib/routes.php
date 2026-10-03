@@ -1266,8 +1266,8 @@ route('GET', '/api/admin/schools/export', function ($p, $b, $u) {
 route('GET', '/api/admin/schools/map', fn($p, $b, $u) => Db::all(
   "SELECT s.id,s.code,s.name,s.lat,s.lng,s.location_status,s.level,s.student_count,s.driver_count,s.address,s.photo_path,
       c.title company_title,d.title district_title
-   FROM schools s LEFT JOIN companies c ON c.id=s.company_id LEFT JOIN districts d ON d.id=s.district_id
-   WHERE s.lat IS NOT NULL AND s.lng IS NOT NULL"), false, 'admin');
+   FROM schools s JOIN companies c ON c.id=s.company_id AND c.is_active=1 LEFT JOIN districts d ON d.id=s.district_id
+   WHERE s.is_active=1 AND s.lat IS NOT NULL AND s.lng IS NOT NULL"), false, 'admin');
 
 // نقشه و جستجوی عمومی مدارس برای صفحهٔ اول سایت
 // فهرست عمومی مدارس برای فرم ثبت‌نام/شکایت؛ شامل مدارس فاقد مختصات نیز می‌شود.
@@ -1321,27 +1321,28 @@ route('GET', '/api/public/company/{id}', function ($p, $b) {
 /* ==================== آمار و گزارش‌گیری ادمین ==================== */
 route('GET', '/api/admin/stats', function ($p, $b, $u) {
   _ensure_school_columns();
-  $total = (int)(Db::one("SELECT COUNT(*) n FROM schools")['n'] ?? 0);
-  $done = (int)(Db::one("SELECT COUNT(*) n FROM schools WHERE location_status='done'")['n'] ?? 0);
+  // آمار مدیریتی فقط از مدارس فعال و شرکت‌های فعال تشکیل می‌شود.
+  $total = (int)(Db::one("SELECT COUNT(*) n FROM schools s JOIN companies c ON c.id=s.company_id AND c.is_active=1 WHERE s.is_active=1")['n'] ?? 0);
+  $done = (int)(Db::one("SELECT COUNT(*) n FROM schools s JOIN companies c ON c.id=s.company_id AND c.is_active=1 WHERE s.is_active=1 AND s.location_status='done'")['n'] ?? 0);
   $companies = (int)(Db::one("SELECT COUNT(*) n FROM companies WHERE is_active=1")['n'] ?? 0);
   $districts = (int)(Db::one("SELECT COUNT(*) n FROM districts WHERE is_active=1")['n'] ?? 0);
-  $reps = (int)(Db::one("SELECT COUNT(*) n FROM company_users WHERE is_active=1")['n'] ?? 0);
+  $reps = (int)(Db::one("SELECT COUNT(*) n FROM company_users cu JOIN companies c ON c.id=cu.company_id AND c.is_active=1 WHERE cu.is_active=1")['n'] ?? 0);
   _ensure_complaints_tables();
   $complaintsTotal = (int)(Db::one("SELECT COUNT(*) n FROM complaints")['n'] ?? 0);
-  $topComplaintCompany = Db::one("SELECT c.id,c.title,COUNT(co.id) complaints_count FROM complaints co LEFT JOIN companies c ON c.id=co.company_id WHERE co.company_id IS NOT NULL GROUP BY c.id,c.title ORDER BY complaints_count DESC LIMIT 1");
-  $bottomComplaintCompany = Db::one("SELECT c.id,c.title,COUNT(co.id) complaints_count FROM complaints co LEFT JOIN companies c ON c.id=co.company_id WHERE co.company_id IS NOT NULL GROUP BY c.id,c.title ORDER BY complaints_count ASC,c.title LIMIT 1");
-  $totalStudents = (int)(Db::one("SELECT COALESCE(SUM(student_count),0) n FROM schools")['n'] ?? 0);
-  $totalDrivers = (int)(Db::one("SELECT COALESCE(SUM(driver_count),0) n FROM schools")['n'] ?? 0);
-  $byCompany = Db::all("SELECT c.id,c.title,
-      COUNT(s.id) total, SUM(s.location_status='done') done
-    FROM companies c LEFT JOIN schools s ON s.company_id=c.id GROUP BY c.id, c.title ORDER BY total DESC");
-  $recent = Db::all("SELECT l.id, l.created_at, s.name school_name, s.code school_code, cu.full_name editor_name, c.title company_title
-    FROM school_visit_logs l JOIN schools s ON s.id=l.school_id JOIN company_users cu ON cu.id=l.company_user_id
-    JOIN companies c ON c.id=cu.company_id ORDER BY l.id DESC LIMIT 20");
-  return ['total_schools' => $total, 'done' => $done, 'pending' => $total - $done, 'companies' => $companies,
-    'districts' => $districts, 'reps' => $reps, 'total_students' => $totalStudents, 'total_drivers' => $totalDrivers,
-    'complaints_total' => $complaintsTotal, 'top_complaint_company' => $topComplaintCompany, 'bottom_complaint_company' => $bottomComplaintCompany,
-    'by_company' => $byCompany, 'recent_activity' => $recent];
+  $topComplaintCompany = Db::one("SELECT c.id,c.title,COUNT(co.id) complaints_count FROM complaints co JOIN companies c ON c.id=co.company_id AND c.is_active=1 WHERE co.company_id IS NOT NULL GROUP BY c.id,c.title ORDER BY complaints_count DESC LIMIT 1");
+  $bottomComplaintCompany = Db::one("SELECT c.id,c.title,COUNT(co.id) complaints_count FROM complaints co JOIN companies c ON c.id=co.company_id AND c.is_active=1 WHERE co.company_id IS NOT NULL GROUP BY c.id,c.title ORDER BY complaints_count ASC,c.title LIMIT 1");
+  $totalStudents = (int)(Db::one("SELECT COALESCE(SUM(s.student_count),0) n FROM schools s JOIN companies c ON c.id=s.company_id AND c.is_active=1 WHERE s.is_active=1")['n'] ?? 0);
+  $totalDrivers = (int)(Db::one("SELECT COALESCE(SUM(s.driver_count),0) n FROM schools s JOIN companies c ON c.id=s.company_id AND c.is_active=1 WHERE s.is_active=1")['n'] ?? 0);
+  $byCompany = Db::all("SELECT c.id,c.title,COUNT(s.id) total,COALESCE(SUM(s.location_status='done'),0) done
+    FROM companies c LEFT JOIN schools s ON s.company_id=c.id AND s.is_active=1
+    WHERE c.is_active=1 GROUP BY c.id,c.title ORDER BY total DESC");
+  $recent = Db::all("SELECT l.id,l.created_at,s.name school_name,s.code school_code,cu.full_name editor_name,c.title company_title
+    FROM school_visit_logs l JOIN schools s ON s.id=l.school_id AND s.is_active=1
+    JOIN company_users cu ON cu.id=l.company_user_id AND cu.is_active=1
+    JOIN companies c ON c.id=cu.company_id AND c.is_active=1 ORDER BY l.id DESC LIMIT 20");
+  return ['total_schools'=>$total,'done'=>$done,'pending'=>max(0,$total-$done),'companies'=>$companies,'districts'=>$districts,'reps'=>$reps,
+    'total_students'=>$totalStudents,'total_drivers'=>$totalDrivers,'complaints_total'=>$complaintsTotal,
+    'top_complaint_company'=>$topComplaintCompany,'bottom_complaint_company'=>$bottomComplaintCompany,'by_company'=>$byCompany,'recent_activity'=>$recent];
 }, false, 'admin');
 
 route('GET', '/api/admin/reports/company/{id}', function ($p, $b, $u) {
@@ -3537,26 +3538,43 @@ route('GET','/api/company/reservations/map', function($p,$b,$u){
 /* ---- تحلیل آماری مدارس و شرکت‌ها ---- */
 route('GET','/api/admin/analytics',function($p,$b,$u){
   _ensure_school_columns();
-  $summary=Db::one("SELECT (SELECT COUNT(*) FROM schools) total_schools,(SELECT COUNT(*) FROM companies WHERE is_active=1) total_companies,(SELECT COUNT(*) FROM districts WHERE is_active=1) total_districts,(SELECT COALESCE(SUM(student_count),0) FROM schools) total_students");
-  $districts=Db::all("SELECT d.id district_id,d.title district_title,COUNT(s.id) school_count,COALESCE(SUM(s.student_count),0) student_count FROM districts d LEFT JOIN schools s ON s.district_id=d.id WHERE d.is_active=1 GROUP BY d.id,d.title ORDER BY school_count DESC,d.title");
-  $companies=Db::all("SELECT c.id company_id,c.title company_title,COUNT(s.id) school_count,COALESCE(SUM(s.student_count),0) student_count FROM companies c LEFT JOIN schools s ON s.company_id=c.id WHERE c.is_active=1 GROUP BY c.id,c.title ORDER BY school_count DESC,c.title");
-  $levels=Db::all("SELECT COALESCE(NULLIF(TRIM(s.level),''),'نامشخص') level,COUNT(*) school_count,COALESCE(SUM(s.student_count),0) student_count FROM schools s GROUP BY COALESCE(NULLIF(TRIM(s.level),''),'نامشخص') ORDER BY school_count DESC");
-  $schools=Db::all("SELECT s.id,s.code,s.name,s.student_count,s.level,s.district_id,d.title district_title,s.company_id,c.title company_title FROM schools s LEFT JOIN districts d ON d.id=s.district_id LEFT JOIN companies c ON c.id=s.company_id ORDER BY d.title,s.name");
+  // فقط مدارس فعالِ متعلق به شرکت فعال در آمار وارد می‌شوند.
+  $summary=Db::one("SELECT
+    (SELECT COUNT(*) FROM schools s JOIN companies c ON c.id=s.company_id AND c.is_active=1 WHERE s.is_active=1) total_schools,
+    (SELECT COUNT(*) FROM companies WHERE is_active=1) total_companies,
+    (SELECT COUNT(*) FROM districts WHERE is_active=1) total_districts,
+    (SELECT COALESCE(SUM(s.student_count),0) FROM schools s JOIN companies c ON c.id=s.company_id AND c.is_active=1 WHERE s.is_active=1) total_students");
+  $districts=Db::all("SELECT d.id district_id,d.title district_title,COUNT(s.id) school_count,COALESCE(SUM(s.student_count),0) student_count
+    FROM districts d JOIN schools s ON s.district_id=d.id AND s.is_active=1
+    JOIN companies c ON c.id=s.company_id AND c.is_active=1
+    WHERE d.is_active=1 GROUP BY d.id,d.title ORDER BY school_count DESC,d.title");
+  $companies=Db::all("SELECT c.id company_id,c.title company_title,COUNT(s.id) school_count,COALESCE(SUM(s.student_count),0) student_count
+    FROM companies c JOIN schools s ON s.company_id=c.id AND s.is_active=1
+    WHERE c.is_active=1 GROUP BY c.id,c.title ORDER BY school_count DESC,c.title");
+  $levels=Db::all("SELECT COALESCE(NULLIF(TRIM(s.level),''),'نامشخص') level,COUNT(*) school_count,COALESCE(SUM(s.student_count),0) student_count
+    FROM schools s JOIN companies c ON c.id=s.company_id AND c.is_active=1
+    WHERE s.is_active=1 GROUP BY COALESCE(NULLIF(TRIM(s.level),''),'نامشخص') ORDER BY school_count DESC");
+  $schools=Db::all("SELECT s.id,s.code,s.name,s.student_count,s.level,s.district_id,d.title district_title,s.company_id,c.title company_title
+    FROM schools s JOIN companies c ON c.id=s.company_id AND c.is_active=1 LEFT JOIN districts d ON d.id=s.district_id
+    WHERE s.is_active=1 ORDER BY d.title,s.name");
   return ['summary'=>$summary,'by_district'=>$districts,'by_company'=>$companies,'by_level'=>$levels,'schools'=>$schools];
 },false,'admin');
 
 route('GET','/api/admin/analytics/schools',function($p,$b,$u){
   _ensure_school_columns();
-  $q=trim($_GET['q']??'');$args=[];$where='';
-  if($q!==''){$like='%'.$q.'%';$where=' WHERE s.name LIKE ? OR s.code LIKE ?';$args=[$like,$like];}
-  return Db::all("SELECT s.id,s.code,s.name,s.student_count,s.level,s.district_id,d.title district_title,s.company_id,c.title company_title FROM schools s LEFT JOIN districts d ON d.id=s.district_id LEFT JOIN companies c ON c.id=s.company_id $where ORDER BY d.title,s.name LIMIT 5000",$args);
+  $q=trim($_GET['q']??'');$args=[];$where=' WHERE s.is_active=1 AND c.is_active=1';
+  if($q!==''){$like='%'.$q.'%';$where.=' AND (s.name LIKE ? OR s.code LIKE ?)';$args=[$like,$like];}
+  return Db::all("SELECT s.id,s.code,s.name,s.student_count,s.level,s.district_id,d.title district_title,s.company_id,c.title company_title
+    FROM schools s JOIN companies c ON c.id=s.company_id LEFT JOIN districts d ON d.id=s.district_id $where ORDER BY d.title,s.name LIMIT 5000",$args);
 },false,'admin');
 
 route('GET','/api/admin/analytics/company/{id}',function($p,$b,$u){
   _ensure_school_columns();$id=(int)$p['id'];
-  $company=Db::one("SELECT id,title FROM companies WHERE id=?",[$id]);if(!$company)Http::error('شرکت یافت نشد.',404);
-  $summary=Db::one("SELECT COUNT(*) school_count,COALESCE(SUM(s.student_count),0) student_count,COUNT(DISTINCT s.district_id) district_count FROM schools s WHERE s.company_id=?",[$id]);
-  $schools=Db::all("SELECT s.id,s.code,s.name,s.student_count,s.level,d.title district_title FROM schools s LEFT JOIN districts d ON d.id=s.district_id WHERE s.company_id=? ORDER BY d.title,s.name",[$id]);
+  $company=Db::one("SELECT id,title FROM companies WHERE id=? AND is_active=1",[$id]);if(!$company)Http::error('شرکت یافت نشد یا غیرفعال است',404);
+  $summary=Db::one("SELECT COUNT(*) school_count,COALESCE(SUM(s.student_count),0) student_count,COUNT(DISTINCT s.district_id) district_count
+    FROM schools s WHERE s.company_id=? AND s.is_active=1",[$id]);
+  $schools=Db::all("SELECT s.id,s.code,s.name,s.student_count,s.level,d.title district_title
+    FROM schools s LEFT JOIN districts d ON d.id=s.district_id WHERE s.company_id=? AND s.is_active=1 ORDER BY d.title,s.name",[$id]);
   return ['company'=>$company,'summary'=>$summary,'schools'=>$schools];
 },false,'admin');
 
