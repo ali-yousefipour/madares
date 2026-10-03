@@ -1,0 +1,40 @@
+name: Analyze school reconciliation data
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install
+        run: pip install openpyxl
+      - name: Analyze
+        run: |
+          python - <<'PY'
+          import json,re,glob,openpyxl,os
+          out={}
+          for f in glob.glob('*.xlsx'):
+            wb=openpyxl.load_workbook(f,data_only=True,read_only=True)
+            sheets={}
+            for ws in wb.worksheets:
+              it=ws.iter_rows(values_only=True); first=next(it,None); rows=[]
+              for r in it:
+                if any(v not in (None,'') for v in r): rows.append(list(r))
+              sheets[ws.title]={'headers':list(first or []),'rows':len(rows),'sample':rows[:5]}
+            out['excel']={'file':f,'sheets':sheets}
+          for f in glob.glob('*.sql'):
+            s=open(f,encoding='utf-8',errors='replace').read()
+            tables=re.findall(r'CREATE TABLE(?: IF NOT EXISTS)?\\s+[`]?([^\\s`(]+)[`]?',s,re.I)
+            inserts=re.findall(r'INSERT INTO\\s+[`]?([^\\s`(]+)[`]?',s,re.I)
+            out['sql']={'file':f,'bytes':len(s.encode()),'tables':tables,'insert_tables':sorted(set(inserts)),'school_mentions':len(re.findall(r'(?i)school',s)),'student_mentions':len(re.findall(r'(?i)student',s))}
+          os.makedirs('analysis',exist_ok=True)
+          json.dump(out,open('analysis/summary.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reconciliation-analysis
+          path: analysis/summary.json
