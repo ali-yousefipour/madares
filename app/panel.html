@@ -1802,7 +1802,16 @@ const ANALYTICS_REFERENCE_DISTRICT_POLYGONS={
 "3":[[36.303871,59.565205],[36.303226,59.605534],[36.298710,59.638849],[36.321935,59.651123],[36.298065,59.688384],[36.262581,59.685315],[36.235484,59.664274],[36.244516,59.637096],[36.252903,59.607288],[36.251613,59.565205]],
 "2":[[36.262581,59.685315],[36.312258,59.719507],[36.294839,59.730904],[36.291613,59.761151],[36.249677,59.757205],[36.221290,59.730027],[36.213548,59.698466],[36.235484,59.664274]]
 };
-function analyticsDistrictReferencePolygon(id){return ANALYTICS_REFERENCE_DISTRICT_POLYGONS[String(id)]||null;}
+function analyticsDistrictNumber(r){
+  const raw=String(r?.district_title||'');
+  const t=raw.replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+  const m=t.match(/(?:ناحیه|منطقه|district)\s*([1-7])(?:\D|$)/i)||t.match(/(?:^|\s)([1-7])(?:\s|$)/);
+  return m?String(m[1]):(t.includes('تبادکان')?'tabadkan':String(r?.district_id||''));
+}
+function analyticsDistrictReferencePolygon(r){
+  const key=analyticsDistrictNumber(r);
+  return ANALYTICS_REFERENCE_DISTRICT_POLYGONS[key]||null;
+}
 function analyticsRenderDistrictMap(){
   const host=document.getElementById('analyticsDistrictMap');if(!host||typeof L==='undefined')return;
   const all=[...(ANALYTICS_CACHE?.by_district||[])].sort((a,b)=>analyticsDistrictSortKey(a)-analyticsDistrictSortKey(b)||String(a.district_title||'').localeCompare(String(b.district_title||'')));
@@ -1818,21 +1827,26 @@ function analyticsRenderDistrictMap(){
       points.forEach(p=>bounds.push([p[1],p[0]]));
       const color=palette[i%palette.length];
       const selected=String(r.district_id)===String(ANALYTICS_FILTER_DISTRICT);
-      const popup='<div><b>ناحیه '+esc(String(r.district_title||'').replace(/ناحیه\s*/,'')||'—')+'</b><br>مدارس فعال: '+analyticsNum(r.school_count)+'<br>دانش‌آموز: '+analyticsNum(r.student_count)+'</div>';
-      const ref=analyticsDistrictReferencePolygon(r.district_id);
+      const districtName=String(r.district_title||'ناحیه نامشخص').replace(/^\s*ناحیه\s*/,'').trim()||'—';
+      const popup='<div><b>ناحیه '+esc(districtName)+'</b><br>مدارس فعال: '+analyticsNum(r.school_count)+'<br>دانش‌آموز: '+analyticsNum(r.student_count)+'</div>';
+      const ref=analyticsDistrictReferencePolygon(r);
       if(ref){
-        const poly=L.polygon(ref,{color,weight:selected?4:2,opacity:.95,fillColor:color,fillOpacity:selected?.30:.12});
+        const poly=L.polygon(ref,{color,weight:selected?4:2,opacity:.98,fillColor:color,fillOpacity:selected?.30:.10,interactive:true});
         poly.bindPopup(popup);
         poly.on('click',()=>setAnalyticsDistrict(r.district_id));
         poly.addTo(map);
         const center=poly.getBounds().getCenter();
-        L.marker(center,{interactive:false,icon:L.divIcon({html:'<div class="analyticsDistrictLabel">ناحیه '+esc(String(r.district_title||'').replace(/ناحیه\s*/,'')||'—')+'</div>',className:'',iconSize:[70,30],iconAnchor:[35,15]})}).addTo(map);
+        const labelHtml='<div class="analyticsDistrictLabel" style="min-width:132px;padding:3px 8px;line-height:1.45">ناحیه '+esc(districtName)+'<br><span style="font-weight:700;font-size:9px">مدارس: '+analyticsNum(r.school_count)+' | دانش‌آموز: '+analyticsNum(r.student_count)+'</span></div>';
+        L.marker(center,{interactive:false,icon:L.divIcon({html:labelHtml,className:'',iconSize:[150,44],iconAnchor:[75,22]})}).addTo(map);
         ref.forEach(p=>bounds.push(p));
       }else if(points.length>=3){
         const hull=analyticsConvexHull(schools);
         const latlngs=hull.map(p=>[p[1],p[0]]);
         const poly=L.polygon(latlngs,{color,weight:selected?4:2,opacity:.9,fillColor:color,fillOpacity:selected?.28:.13,dashArray:'6 5'});
         poly.bindPopup(popup);poly.on('click',()=>setAnalyticsDistrict(r.district_id));poly.addTo(map);
+        const center=poly.getBounds().getCenter();
+        const labelHtml='<div class="analyticsDistrictLabel" style="min-width:132px;padding:3px 8px;line-height:1.45">ناحیه '+esc(districtName)+'<br><span style="font-weight:700;font-size:9px">مدارس: '+analyticsNum(r.school_count)+' | دانش‌آموز: '+analyticsNum(r.student_count)+'</span></div>';
+        L.marker(center,{interactive:false,icon:L.divIcon({html:labelHtml,className:'',iconSize:[150,44],iconAnchor:[75,22]})}).addTo(map);
       }else if(points.length===2){
         const line=L.polyline(points.map(p=>[p[1],p[0]]),{color,weight:selected?6:4,opacity:.75,dashArray:'6 5'});
         line.bindPopup(popup);line.on('click',()=>setAnalyticsDistrict(r.district_id));line.addTo(map);
