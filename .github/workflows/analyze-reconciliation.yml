@@ -150,6 +150,7 @@ jobs:
           new_rows=[{'excel_index':i,'row':r} for i,r in enumerate(excel_rows) if i not in matched]
           inactive=[int(r['id']) for r in db_rows if r.get('id') and str(r['id']).isdigit() and int(r['id']) not in used]
           out['reconciliation']={'excel_count':len(excel_rows),'matched_count':len(matched),'new_count':len(new_rows),'ambiguous_count':len(ambiguous),'db_count':len(db_rows),'deactivate_count':len(inactive),'excel_students':sum(int(r[5] or 0) for r in excel_rows),'matched_db_ids':sorted(used),'new_rows':new_rows,'ambiguous':ambiguous,'inactive_db_ids':inactive,'company_matches':company_cache,'districts':district_title_by_id}
+          os.makedirs('analysis',exist_ok=True)
           raw_students=[float(r[5] or 0) for r in excel_rows]
           target_students=int(round(sum(raw_students)))
           floors=[int(v) for v in raw_students]
