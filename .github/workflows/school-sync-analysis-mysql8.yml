@@ -136,7 +136,7 @@ jobs:
           for s in schools:
             bycode[norm(s['code'])].append(s)
             # district title
-            dt=next((d['title'] for d in districts if int(d['id'])==int(s['district_id']) if s['district_id'] else False),'')
+            dt=next((d['title'] for d in districts if s['district_id'] and int(d['id'])==int(s['district_id'])),'')
             bykey[(norm(s['name']),distkey(dt),norm(s['level']))].append(s)
           used=set(); matches=[]; inserts=[]; audit=[]
           for i,e in enumerate(excel,1):
