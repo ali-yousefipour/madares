@@ -2038,6 +2038,8 @@ function selectAnalyticsSchool(id){
 }
 function setAnalyticsDistrict(id){
   ANALYTICS_FILTER_DISTRICT=String(id||'');
+  // انتخاب «همه نواحی» باید دقیقاً معادل فعال بودن چک‌باکس تمام نواحی باشد.
+  // قبلاً مقدار خالی از select باعث می‌شد SHOW_ALL=false بماند و نقشه هیچ ناحیه‌ای رسم نکند.
   ANALYTICS_SHOW_ALL_DISTRICTS=!ANALYTICS_FILTER_DISTRICT;
   ANALYTICS_SELECTED_COMPANY=null;ANALYTICS_SELECTED_SCHOOL=null;
   document.querySelectorAll('.analyticsDistrictBtn').forEach(b=>b.classList.toggle('active',String(b.dataset.id)===ANALYTICS_FILTER_DISTRICT));
@@ -2047,8 +2049,15 @@ function setAnalyticsDistrict(id){
 }
 function setAnalyticsShowAll(checked){
   ANALYTICS_SHOW_ALL_DISTRICTS=!!checked;
-  if(ANALYTICS_SHOW_ALL_DISTRICTS)ANALYTICS_FILTER_DISTRICT='';
-  document.querySelectorAll('.analyticsDistrictBtn').forEach(b=>b.classList.toggle('active',false));
+  if(ANALYTICS_SHOW_ALL_DISTRICTS){
+    ANALYTICS_FILTER_DISTRICT='';
+  }else if(!ANALYTICS_FILTER_DISTRICT){
+    // در حالت خاموش بودن «تمام نواحی»، یک ناحیه واقعی باید انتخاب شود؛
+    // در غیر این صورت visibleDistricts خالی می‌شود و نقشه ناپدید می‌گردد.
+    const first=[...(ANALYTICS_CACHE?.by_district||[])].sort((a,b)=>analyticsDistrictSortKey(a)-analyticsDistrictSortKey(b))[0];
+    if(first) ANALYTICS_FILTER_DISTRICT=String(first.district_id||'');
+  }
+  document.querySelectorAll('.analyticsDistrictBtn').forEach(b=>b.classList.toggle('active',String(b.dataset.id)===ANALYTICS_FILTER_DISTRICT));
   const sel=document.getElementById('analyticsDistrictSelect');if(sel)sel.value=ANALYTICS_FILTER_DISTRICT;
   analyticsRenderAll();
 }
@@ -2066,7 +2075,9 @@ async function renderAnalytics(){
   main.innerHTML='<div class="analyticsEmpty">در حال بارگذاری تحلیل آماری...</div>';
   try{
     const d=ANALYTICS_CACHE=await api('/admin/analytics'),s=d.summary||{},districts=d.by_district||[];
-    ANALYTICS_FILTER_DISTRICT='';ANALYTICS_SELECTED_COMPANY=null;ANALYTICS_SELECTED_SCHOOL=null;
+    ANALYTICS_FILTER_DISTRICT='';
+    ANALYTICS_SHOW_ALL_DISTRICTS=true;
+    ANALYTICS_SELECTED_COMPANY=null;ANALYTICS_SELECTED_SCHOOL=null;
     main.innerHTML='<div class="analyticsTop">'+
       '<div class="analyticsKpi"><div class="analyticsKpiIcon">🎓</div><div class="analyticsKpiText"><b>'+analyticsNum(s.total_students)+'</b><span>کل دانش‌آموزان سرویس‌شده</span></div></div>'+
       '<div class="analyticsKpi"><div class="analyticsKpiIcon">🏫</div><div class="analyticsKpiText"><b>'+analyticsNum(s.total_schools)+'</b><span>تعداد مدارس</span></div></div>'+
