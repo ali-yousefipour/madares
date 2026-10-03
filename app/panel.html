@@ -1767,7 +1767,8 @@ function analyticsSchoolDetail(s){
     '<button class="btn analyticsDetailAction" onclick="goTab(\'schools\')">مشاهده در بخش مدارس</button>';
 }
 function analyticsDistrictSortKey(r){
-  const t=String(r?.district_title||'');
+  const raw=String(r?.district_title||'');
+  const t=raw.replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
   const m=t.match(/(?:ناحیه\s*)?([1-7])(?:\D|$)/);
   if(m && /ناحیه|district/i.test(t)) return Number(m[1]);
   if(t.includes('تبادکان')) return 8;
