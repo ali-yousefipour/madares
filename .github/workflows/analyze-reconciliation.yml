@@ -29,6 +29,57 @@ jobs:
             creates.append({'table':m.group(1),'definition':m.group(2)[:20000]})
           inserts={}
           for m in re.finditer(r'INSERT INTO\\s+[`]?([^\\s`(]+)[`]?',s,re.I): inserts[m.group(1)]=inserts.get(m.group(1),0)+1
+          def extract_insert(table):
+            m=re.search(r'INSERT INTO\\s+'+re.escape(table)+r'\\s*\\((.*?)\\)\\s*VALUES\\s*(.*?);',s,re.I|re.S)
+            return m
+          def split_rows(v):
+            rows=[]; buf=[]; q=False; esc=False; depth=0; i=0
+            while i<len(v):
+              ch=v[i]
+              if q:
+                buf.append(ch)
+                if esc: esc=False
+                elif ch=='\\\\': esc=True
+                elif ch==chr(39): q=False
+              else:
+                if ch==chr(39): q=True; buf.append(ch)
+                elif ch=='(': depth+=1; buf.append(ch)
+                elif ch==')':
+                  depth-=1; buf.append(ch)
+                  if depth==0: rows.append(''.join(buf)); buf=[]
+                elif depth==0 and ch==',': pass
+                else: buf.append(ch)
+              i+=1
+            return rows
+          def parse_tuple(t):
+            inner=t[1:-1]; vals=[]; buf=[]; q=False; esc=False; i=0
+            while i<len(inner):
+              ch=inner[i]
+              if q:
+                buf.append(ch)
+                if esc: esc=False
+                elif ch=='\\\\': esc=True
+                elif ch==chr(39): q=False
+              else:
+                if ch==chr(39): q=True; buf.append(ch)
+                elif ch==',': vals.append(''.join(buf).strip()); buf=[]
+                else: buf.append(ch)
+              i+=1
+            vals.append(''.join(buf).strip())
+            out=[]
+            for v in vals:
+              if v.upper()=='NULL': out.append(None)
+              elif len(v)>=2 and v[0]==chr(39) and v[-1]==chr(39): out.append(v[1:-1].replace(chr(39)+chr(39),chr(39)))
+              else: out.append(v)
+            return out
+          parsed={}
+          for table in ['districts','companies','schools']:
+            m=extract_insert(table)
+            if not m: parsed[table]=[]; continue
+            cols=[x.strip() for x in m.group(1).split(',')]
+            parsed[table]=[dict(zip(cols,parse_tuple(r))) for r in split_rows(m.group(2))]
+          out['parsed_data']={k:{'count':len(v),'columns':list(v[0].keys()) if v else [],'rows':v} for k,v in parsed.items()}
+          out['sql']['schools_definition']=next((x['definition'] for x in creates if x['table']=='schools'),'')
           out['sql']={'file':sf,'bytes':len(s.encode()),'tables':creates,'insert_statements':inserts,'school_related_tables':[x['table'] for x in creates if re.search(r'school|madres|student',x['table'],re.I)],'head':s[:5000],'tail':s[-5000:],'keywords':{k:len(re.findall(k,s,re.I)) for k in ['CREATE','INSERT','UPDATE','VALUES','school','student','district','students']}}
           os.makedirs('analysis',exist_ok=True)
           json.dump(out,open('analysis/summary.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
