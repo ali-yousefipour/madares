@@ -79,8 +79,8 @@ jobs:
             cols=[x.strip() for x in m.group(1).split(',')]
             parsed[table]=[dict(zip(cols,parse_tuple(r))) for r in split_rows(m.group(2))]
           out['parsed_data']={k:{'count':len(v),'columns':list(v[0].keys()) if v else [],'rows':v} for k,v in parsed.items()}
-          out['sql']['schools_definition']=next((x['definition'] for x in creates if x['table']=='schools'),'')
           out['sql']={'file':sf,'bytes':len(s.encode()),'tables':creates,'insert_statements':inserts,'school_related_tables':[x['table'] for x in creates if re.search(r'school|madres|student',x['table'],re.I)],'head':s[:5000],'tail':s[-5000:],'keywords':{k:len(re.findall(k,s,re.I)) for k in ['CREATE','INSERT','UPDATE','VALUES','school','student','district','students']}}
+          out['sql']['schools_definition']=next((x['definition'] for x in creates if x['table']=='schools'),'')
           os.makedirs('analysis',exist_ok=True)
           json.dump(out,open('analysis/summary.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
           PY
