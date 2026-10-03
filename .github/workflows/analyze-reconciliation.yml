@@ -204,6 +204,9 @@ jobs:
           git add analysis/school_reconciliation.sql analysis/school_reconciliation_report.md
           if ! git diff --cached --quiet; then
             git commit -m "Generate school reconciliation SQL [skip ci]"
+            git fetch origin ${{ github.head_ref }}
+            git reset --soft origin/${{ github.head_ref }}
+            git commit -m "Generate school reconciliation SQL [skip ci]"
             git push origin HEAD:${{ github.head_ref }}
           fi
       - uses: actions/upload-artifact@v4
