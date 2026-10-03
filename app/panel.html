@@ -1876,29 +1876,51 @@ function analyticsDistrictReferencePolygon(r){
   return ANALYTICS_REFERENCE_DISTRICT_POLYGONS[key]||null;
 }
 function analyticsRenderDistrictMap(){
-  const host=document.getElementById('analyticsDistrictMap');if(!host||typeof L==='undefined')return;
+  const host=document.getElementById('analyticsDistrictMap');
+  if(!host||typeof L==='undefined')return;
   const all=[...(ANALYTICS_CACHE?.by_district||[])].sort((a,b)=>analyticsDistrictSortKey(a)-analyticsDistrictSortKey(b)||String(a.district_title||'').localeCompare(String(b.district_title||'')));
   const by=analyticsDistrictSchools();
+  const selectedKey=analyticsDistrictFilterKey(ANALYTICS_FILTER_DISTRICT);
   try{
     const mapObj=createMap('analyticsDistrictMap',{lat:36.297,lng:59.606,zoom:11});
     const map=mapObj.raw;if(!map)return;
+
+    /*
+     * نکتهٔ مهم:
+     * در حالت انتخاب یک ناحیه، فیلتر نقشه باید بر اساس «کلید استاندارد ناحیه»
+     * انجام شود، نه فقط district_id. چون API ممکن است district_id را عددی/رشته‌ای
+     * برگرداند ولی عنوان را با «ناحیه ۲»، «منطقه ۲» یا ارقام فارسی ارسال کند.
+     */
+    const visibleDistricts=ANALYTICS_SHOW_ALL_DISTRICTS
+      ? all
+      : all.filter(r=>analyticsDistrictNumber(r)===selectedKey);
+
     const bounds=[];
     const palette=['#1769aa','#d69a19','#16826a','#8b4fa3','#b04a38','#287b9d','#5d7f2d','#8a5b2d'];
-    const visibleDistricts=ANALYTICS_SHOW_ALL_DISTRICTS?all:all.filter(r=>analyticsDistrictMatches(r,ANALYTICS_FILTER_DISTRICT));
+
     visibleDistricts.forEach((r,i)=>{
-      const schools=by[analyticsDistrictNumber(r)]||[];
-      const points=schools.map(s=>[Number(s.lng),Number(s.lat)]);
-      points.forEach(p=>bounds.push([p[1],p[0]]));
+      const districtKey=analyticsDistrictNumber(r);
+      const schools=by[districtKey]||[];
+      const points=schools.map(s=>[Number(s.lng),Number(s.lat)]).filter(p=>Number.isFinite(p[0])&&Number.isFinite(p[1]));
       const color=palette[i%palette.length];
-      const selected=String(r.district_id)===String(ANALYTICS_FILTER_DISTRICT);
-      const districtName=String(r.district_title||'ناحیه نامشخص').replace(/^\s*ناحیه\s*/,'').trim()||'—';
+      const selected=!ANALYTICS_SHOW_ALL_DISTRICTS && districtKey===selectedKey;
+      const districtName=String(r.district_title||('ناحیه '+districtKey)).replace(/^\\s*(?:ناحیه|منطقه)\\s*/,'').trim()||'—';
       const popup='<div><b>ناحیه '+esc(districtName)+'</b><br>مدارس فعال: '+analyticsNum(r.school_count)+'<br>دانش‌آموز: '+analyticsNum(r.student_count)+'</div>';
       const ref=analyticsDistrictReferencePolygon(r);
+
       if(ref){
-        const poly=L.polygon(ref,{color,weight:selected?4:2,opacity:.98,fillColor:color,fillOpacity:selected?.30:.10,interactive:true});
+        const poly=L.polygon(ref,{
+          color,
+          weight:selected?4:2,
+          opacity:.98,
+          fillColor:color,
+          fillOpacity:selected?.30:.10,
+          interactive:true
+        });
         poly.bindPopup(popup);
         poly.on('click',()=>setAnalyticsDistrict(r.district_id));
         poly.addTo(map);
+
         const center=poly.getBounds().getCenter();
         const labelHtml='<div class="analyticsDistrictLabel" style="min-width:132px;padding:3px 8px;line-height:1.45">ناحیه '+esc(districtName)+'<br><span style="font-weight:700;font-size:9px">مدارس: '+analyticsNum(r.school_count)+' | دانش‌آموز: '+analyticsNum(r.student_count)+'</span></div>';
         L.marker(center,{interactive:false,icon:L.divIcon({html:labelHtml,className:'',iconSize:[150,44],iconAnchor:[75,22]})}).addTo(map);
@@ -1906,20 +1928,47 @@ function analyticsRenderDistrictMap(){
       }else if(points.length>=3){
         const hull=analyticsConvexHull(schools);
         const latlngs=hull.map(p=>[p[1],p[0]]);
-        const poly=L.polygon(latlngs,{color,weight:selected?4:2,opacity:.9,fillColor:color,fillOpacity:selected?.28:.13,dashArray:'6 5'});
-        poly.bindPopup(popup);poly.on('click',()=>setAnalyticsDistrict(r.district_id));poly.addTo(map);
+        const poly=L.polygon(latlngs,{
+          color,weight:selected?4:2,opacity:.9,fillColor:color,
+          fillOpacity:selected?.28:.13,dashArray:'6 5'
+        });
+        poly.bindPopup(popup);
+        poly.on('click',()=>setAnalyticsDistrict(r.district_id));
+        poly.addTo(map);
         const center=poly.getBounds().getCenter();
         const labelHtml='<div class="analyticsDistrictLabel" style="min-width:132px;padding:3px 8px;line-height:1.45">ناحیه '+esc(districtName)+'<br><span style="font-weight:700;font-size:9px">مدارس: '+analyticsNum(r.school_count)+' | دانش‌آموز: '+analyticsNum(r.student_count)+'</span></div>';
         L.marker(center,{interactive:false,icon:L.divIcon({html:labelHtml,className:'',iconSize:[150,44],iconAnchor:[75,22]})}).addTo(map);
       }else if(points.length===2){
         const line=L.polyline(points.map(p=>[p[1],p[0]]),{color,weight:selected?6:4,opacity:.75,dashArray:'6 5'});
-        line.bindPopup(popup);line.on('click',()=>setAnalyticsDistrict(r.district_id));line.addTo(map);
+        line.bindPopup(popup);
+        line.on('click',()=>setAnalyticsDistrict(r.district_id));
+        line.addTo(map);
       }else if(points.length===1){
         const circle=L.circle([points[0][1],points[0][0]],{radius:250,color,weight:selected?4:2,fillColor:color,fillOpacity:.18});
-        circle.bindPopup(popup);circle.on('click',()=>setAnalyticsDistrict(r.district_id));circle.addTo(map);
+        circle.bindPopup(popup);
+        circle.on('click',()=>setAnalyticsDistrict(r.district_id));
+        circle.addTo(map);
       }
     });
-    if(bounds.length)map.fitBounds(bounds,{padding:[24,24],maxZoom:12});
+
+    /*
+     * در حالت انتخابی فقط محدودهٔ همان ناحیه برای fitBounds استفاده می‌شود.
+     * بنابراین نقشه بعد از انتخاب ناحیه روی همان مرز می‌رود و سایر نواحی وارد
+     * محاسبهٔ viewport نمی‌شوند.
+     */
+    if(bounds.length){
+      map.fitBounds(bounds,{padding:[24,24],maxZoom:ANALYTICS_SHOW_ALL_DISTRICTS?12:13});
+    }else{
+      map.setView([36.297,59.606],11);
+    }
+
+    // بعد از بازسازی DOM، اندازهٔ واقعی Leaflet را دوباره محاسبه کن.
+    setTimeout(()=>{
+      try{
+        map.invalidateSize({pan:false});
+        if(bounds.length)map.fitBounds(bounds,{padding:[24,24],maxZoom:ANALYTICS_SHOW_ALL_DISTRICTS?12:13});
+      }catch(e){}
+    },80);
   }catch(e){console.warn('analytics district map failed',e);}
 }
 function analyticsRenderLevelChart(rows){
