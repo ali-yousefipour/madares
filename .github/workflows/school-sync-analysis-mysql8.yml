@@ -17,7 +17,7 @@ jobs:
           python - <<'PY'
           import openpyxl,re,unicodedata,difflib,csv,os,math
           from collections import defaultdict
-          X='گزارش_تطبیق_دقیق_مدارس_و_شرکتها.xlsx'
+          X='new data.xlsx'
           import subprocess
           def q(v):
             if v is None: return 'NULL'
@@ -94,7 +94,7 @@ jobs:
           cmap={norm(r['title']):int(r['id']) for r in companies if r['is_active']!='0'}
           # The authoritative reconciliation sheet is همه_مدارس_Excel.
           wb=openpyxl.load_workbook(X,data_only=True,read_only=True)
-          ws=wb['همه_مدارس_Excel']
+          ws=wb[wb.sheetnames[0]]
           rows=list(ws.iter_rows(values_only=True))
           header=[str(v).strip() if v is not None else '' for v in rows[0]]
           def ci(names):
