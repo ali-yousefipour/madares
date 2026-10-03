@@ -33,22 +33,22 @@ jobs:
             tick=chr(96); m=re.search(r'INSERT INTO\s+'+tick+'?'+re.escape(table)+tick+'?'+r'\s*\((.*?)\)\s*VALUES\s*(.*?);',s,re.I|re.S)
             return m
           def split_rows(v):
-            rows=[]; buf=[]; q=False; esc=False; depth=0; i=0
+            rows=[]; buf=[]; q=False; esc=False; depth=0; i=0; active=False
             while i<len(v):
               ch=v[i]
               if q:
-                buf.append(ch)
+                if active: buf.append(ch)
                 if esc: esc=False
                 elif ch=='\\\\': esc=True
                 elif ch==chr(39): q=False
               else:
-                if ch==chr(39): q=True; buf.append(ch)
-                elif ch=='(': depth+=1; buf.append(ch)
-                elif ch==')':
+                if ch==chr(39): q=True; active=True; buf.append(ch)
+                elif ch=='(' and depth==0: depth=1; active=True; buf=[ch]
+                elif ch=='(' and depth>0: depth+=1; buf.append(ch)
+                elif ch==')' and depth>0:
                   depth-=1; buf.append(ch)
-                  if depth==0: rows.append(''.join(buf)); buf=[]
-                elif depth==0 and ch==',': pass
-                else: buf.append(ch)
+                  if depth==0: rows.append(''.join(buf)); buf=[]; active=False
+                elif active: buf.append(ch)
               i+=1
             return rows
           def parse_tuple(t):
@@ -76,7 +76,7 @@ jobs:
           for table in ['districts','companies','schools']:
             m=extract_insert(table)
             if not m: parsed[table]=[]; continue
-            cols=[x.strip() for x in m.group(1).split(',')]
+            cols=[x.strip().strip(chr(96)) for x in m.group(1).split(',')]
             parsed[table]=[dict(zip(cols,parse_tuple(r))) for r in split_rows(m.group(2))]
           out['parsed_data']={k:{'count':len(v),'columns':list(v[0].keys()) if v else [],'rows':v} for k,v in parsed.items()}
           out['sql']={'file':sf,'bytes':len(s.encode()),'tables':creates,'insert_statements':inserts,'school_related_tables':[x['table'] for x in creates if re.search(r'school|madres|student',x['table'],re.I)],'head':s[:5000],'tail':s[-5000:],'keywords':{k:len(re.findall(k,s,re.I)) for k in ['CREATE','INSERT','UPDATE','VALUES','school','student','district','students']}}
