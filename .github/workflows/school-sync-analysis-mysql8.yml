@@ -12,20 +12,29 @@ jobs:
           python-version: '3.12'
       - name: Prepare
         run: pip install openpyxl
-      - name: Inspect new data workbook
+      - name: Inspect new data totals
         run: |
           python - <<'PY'
-          import openpyxl,json
-          x='new data.xlsx'; wb=openpyxl.load_workbook(x,data_only=True,read_only=True)
-          out={}
+          import openpyxl,re,json
+          wb=openpyxl.load_workbook('new data.xlsx',data_only=True,read_only=True)
+          out={}; total=0; count=0
           for ws in wb.worksheets:
-            rows=[]
-            for i,r in enumerate(ws.iter_rows(values_only=True)):
-              if i>=8: break
-              rows.append(list(r))
-            out[ws.title]={'max_row':ws.max_row,'max_col':ws.max_column,'rows':rows}
-          json.dump(out,open('workbook-inspect.json','w',encoding='utf8'),ensure_ascii=False,indent=2)
-          print(json.dumps(out,ensure_ascii=False)[:12000])
+            rows=list(ws.iter_rows(values_only=True)); header_i=None
+            for i,r in enumerate(rows):
+              if any(str(v).strip()=='مدرسه' for v in r if v is not None):
+                header_i=i; break
+            vals=[]
+            if header_i is not None:
+              h=list(rows[header_i]); si=next((i for i,v in enumerate(h) if v and 'تعداد دانش' in str(v)),None)
+              for r in rows[header_i+1:]:
+                if si is not None and r[0] not in (None,'') and r[si] not in (None,''):
+                  try: vals.append(float(r[si]))
+                  except: pass
+            out[ws.title]={'rows':len(vals),'sum':sum(vals),'integer_sum':sum(round(v) for v in vals),'header_row':header_i}
+            total+=sum(vals); count+=len(vals)
+          out['_total']={'rows':count,'sum':total,'integer_sum':sum(round(v) for ws in out.values() if isinstance(ws,dict) for v in [])}
+          print(json.dumps(out,ensure_ascii=False,indent=2))
+          open('workbook-inspect.json','w',encoding='utf8').write(json.dumps(out,ensure_ascii=False,indent=2))
           PY
       - uses: actions/upload-artifact@v4
         with:
