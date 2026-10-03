@@ -1768,7 +1768,7 @@ function analyticsSchoolDetail(s){
 }
 function analyticsDistrictSortKey(r){
   const t=String(r?.district_title||'');
-  const m=t.match(/(?:ناحیه\\s*)?([1-7])(?:\\D|$)/);
+  const m=t.match(/(?:ناحیه\s*)?([1-7])(?:\D|$)/);
   if(m && /ناحیه|district/i.test(t)) return Number(m[1]);
   if(t.includes('تبادکان')) return 8;
   return 99;
@@ -1807,7 +1807,7 @@ function analyticsRenderDistrictMap(){
       points.forEach(p=>bounds.push([p[1],p[0]]));
       const color=palette[i%palette.length];
       const selected=String(r.district_id)===String(ANALYTICS_FILTER_DISTRICT);
-      const popup='<div><b>ناحیه '+esc(String(r.district_title||'').replace(/ناحیه\\s*/,'')||'—')+'</b><br>مدارس فعال: '+analyticsNum(r.school_count)+'<br>دانش‌آموز: '+analyticsNum(r.student_count)+'</div>';
+      const popup='<div><b>ناحیه '+esc(String(r.district_title||'').replace(/ناحیه\s*/,'')||'—')+'</b><br>مدارس فعال: '+analyticsNum(r.school_count)+'<br>دانش‌آموز: '+analyticsNum(r.student_count)+'</div>';
       if(points.length>=3){
         const hull=analyticsConvexHull(schools);
         const latlngs=hull.map(p=>[p[1],p[0]]);
@@ -1816,7 +1816,7 @@ function analyticsRenderDistrictMap(){
         poly.on('click',()=>setAnalyticsDistrict(r.district_id));
         poly.addTo(map);
         const center=poly.getBounds().getCenter();
-        L.marker(center,{interactive:false,icon:L.divIcon({html:'<div class="analyticsDistrictLabel">ناحیه '+esc(String(r.district_title||'').replace(/ناحیه\\s*/,'')||'—')+'</div>',className:'',iconSize:[70,30],iconAnchor:[35,15]})}).addTo(map);
+        L.marker(center,{interactive:false,icon:L.divIcon({html:'<div class="analyticsDistrictLabel">ناحیه '+esc(String(r.district_title||'').replace(/ناحیه\s*/,'')||'—')+'</div>',className:'',iconSize:[70,30],iconAnchor:[35,15]})}).addTo(map);
       }else if(points.length===2){
         const line=L.polyline(points.map(p=>[p[1],p[0]]),{color,weight:selected?6:4,opacity:.75});
         line.bindPopup(popup);line.on('click',()=>setAnalyticsDistrict(r.district_id));line.addTo(map);
@@ -1844,7 +1844,7 @@ function analyticsRenderLevelChart(rows){
   const max=Math.max(1,...vals.map(x=>Math.max(x.p,x.s)));
   host.innerHTML=vals.slice(0,8).map((x,i)=>{
     const ph=Math.max(3,Math.round(x.p/max*285)),sh=Math.max(3,Math.round(x.s/max*285));
-    return '<div class="analyticsBarGroup"><div class="analyticsBar primary" style="height:'+ph+'px"><span class="analyticsBarValue">'+analyticsNum(x.p)+'</span></div><div class="analyticsBar secondary" style="height:'+sh+'px"><span class="analyticsBarValue">'+analyticsNum(x.s)+'</span></div><span class="analyticsBarLabel">'+esc(String(x.r.district_title||'').replace(/ناحیه\\s*/,'')||String(i+1))+'</span></div>';
+    return '<div class="analyticsBarGroup"><div class="analyticsBar primary" style="height:'+ph+'px"><span class="analyticsBarValue">'+analyticsNum(x.p)+'</span></div><div class="analyticsBar secondary" style="height:'+sh+'px"><span class="analyticsBarValue">'+analyticsNum(x.s)+'</span></div><span class="analyticsBarLabel">'+esc(String(x.r.district_title||'').replace(/ناحیه\s*/,'')||String(i+1))+'</span></div>';
   }).join('');
 }
 function analyticsRenderDonut(rows){
