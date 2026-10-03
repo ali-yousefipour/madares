@@ -434,16 +434,17 @@ table{border-spacing:0 7px;border-collapse:separate}thead th{background:#eef3f9;
 .analyticsPanel{background:#fff;border:1px solid #dfe7ef;border-radius:17px;box-shadow:0 8px 24px rgba(16,42,67,.05);padding:12px;min-width:0}
 .analyticsPanelTitle{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}.analyticsPanelTitle h3{margin:0;color:#173653;font-size:13px;font-weight:950}.analyticsPanelTitle small{color:#7b8798;font-size:9.5px}
 .analyticsTopArea{display:grid;grid-template-columns:1.04fr .96fr;gap:12px;margin-bottom:12px;align-items:stretch}
-.analyticsDistrictPanel{grid-row:span 2;min-height:455px}.analyticsMapStage{height:430px;position:relative;overflow:hidden;border-radius:14px;background:radial-gradient(circle at 50% 50%,#fff 0,#f6f9fc 55%,#e9eff5 100%);border:1px solid #e7edf3}
+.analyticsDistrictPanel{grid-row:span 2;min-height:455px}.analyticsMapStage{height:430px;position:relative;overflow:hidden;border-radius:14px;background:#eef3f7;border:1px solid #dfe7ef}
+.analyticsMapStage .leaflet-container{width:100%;height:100%;font-family:"Vazirmatn","Vazir",Tahoma,sans-serif}
+.analyticsMapStage .leaflet-control-zoom{margin:10px}
+.analyticsMapStage .leaflet-popup-content{direction:rtl;text-align:right;font-family:"Vazirmatn","Vazir",Tahoma,sans-serif;font-size:11px;line-height:1.8}
+.analyticsMapStage .analyticsDistrictLabel{background:rgba(18,56,93,.92);border:2px solid #fff;border-radius:999px;color:#fff;box-shadow:0 3px 12px rgba(0,0,0,.2);font-weight:900;font-size:10px;line-height:28px;text-align:center;white-space:nowrap}
+.analyticsMapNote{margin-top:7px;color:#788697;font-size:9px;text-align:right}
 .analyticsChartPanel{min-height:210px}.analyticsDonutPanel{min-height:210px}
 .analyticsBottomGrid{display:grid;grid-template-columns:1.03fr 1.17fr .76fr;gap:12px}.analyticsCompanyList{max-height:310px;overflow:auto}.analyticsCompanyRow{display:grid;grid-template-columns:24px 1fr 52px 58px 48px;gap:5px;align-items:center;padding:7px 4px;border-bottom:1px solid #edf1f5;cursor:pointer;font-size:9px}.analyticsCompanyRow:hover,.analyticsCompanyRow.active{background:#fff8df}.analyticsCompanyRow b{font-size:9.5px;color:#28465f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.analyticsCompanyRow small{color:#8490a0;font-size:8px}.analyticsCompanyRow .rank{color:#8895a6}.analyticsCompanyRow .companyShare{font-weight:900;color:#173653;text-align:left}.analyticsCompanyHeader{display:grid;grid-template-columns:24px 1fr 52px 58px 48px;gap:5px;padding:6px 4px;background:#f0f4f8;color:#5e6d80;font-size:8px;font-weight:900}
 .analyticsSelectedCompany{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#10385d;color:#fff;border-radius:9px;padding:7px 9px;margin-bottom:7px;font-size:9px}.analyticsSelectedCompany b{font-size:10px;color:#fec617}.analyticsCompanySchoolTable{max-height:260px;overflow:auto}.analyticsCompanySchoolTable table{font-size:9px}.analyticsCompanySchoolTable th,.analyticsCompanySchoolTable td{padding:6px 4px}.analyticsCompanySchoolTable th{font-size:8px;background:#eef3f7}.analyticsCompanySchoolTable tr{cursor:pointer}.analyticsCompanySchoolTable tr:hover{background:#fff8df}
 .analyticsTableFooter{display:flex;justify-content:space-between;align-items:center;padding-top:7px;color:#7a8798;font-size:8.5px}.analyticsPager{display:flex;gap:3px}.analyticsPager button{width:22px;height:22px;padding:0;border:1px solid #d9e2ea;background:#fff;border-radius:5px;font-size:9px}.analyticsPager button.active{background:#fec617;border-color:#fec617}
 .analyticsPanelTitle .panelIcon{font-size:15px;color:#e2ad24;margin-left:5px}
-.analyticsMapStage:before,.analyticsMapStage:after{content:"";position:absolute;border:1px dashed #d7e0e9;border-radius:50%;left:50%;top:50%;transform:translate(-50%,-50%)}.analyticsMapStage:before{width:250px;height:250px}.analyticsMapStage:after{width:150px;height:150px}
-.analyticsMapCenter{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:86px;height:86px;border-radius:50%;background:#12385d;color:#fec617;display:grid;place-items:center;text-align:center;font-weight:950;font-size:12px;z-index:5;box-shadow:0 8px 22px rgba(12,50,82,.24);border:4px solid #fff}
-.analyticsDistrictShape{position:absolute;width:76px;height:76px;display:flex;align-items:center;justify-content:center;text-align:center;border-radius:26px 10px 26px 10px;color:#fff;font-weight:950;font-size:13px;cursor:pointer;box-shadow:0 8px 15px rgba(19,54,83,.14);border:2px solid rgba(255,255,255,.8);transition:.16s;z-index:3}.analyticsDistrictShape:hover{transform:scale(1.05);z-index:8}.analyticsDistrictShape.active{outline:3px solid #fec617;outline-offset:2px}.analyticsDistrictShape.blue{background:linear-gradient(145deg,#1b79bd,#0f4f8c)}.analyticsDistrictShape.gold{background:linear-gradient(145deg,#f3c94d,#d99b17)}
-.analyticsDistrictShape[data-d="1"]{left:50%;top:8%;transform:translateX(-50%);border-radius:30px 10px 30px 10px}.analyticsDistrictShape[data-d="2"]{right:16%;top:18%;transform:rotate(8deg)}.analyticsDistrictShape[data-d="3"]{right:5%;top:44%;transform:rotate(-8deg)}.analyticsDistrictShape[data-d="4"]{right:17%;bottom:15%;transform:rotate(7deg)}.analyticsDistrictShape[data-d="5"]{left:50%;bottom:5%;transform:translateX(-50%) rotate(-4deg)}.analyticsDistrictShape[data-d="6"]{left:17%;bottom:15%;transform:rotate(8deg)}.analyticsDistrictShape[data-d="7"]{left:5%;top:44%;transform:rotate(-7deg)}.analyticsDistrictShape[data-d="8"]{left:16%;top:18%;transform:rotate(6deg)}
 .analyticsDistrictLegend{display:grid;grid-template-columns:repeat(2,1fr);gap:4px 12px;margin-top:8px}.analyticsDistrictLegend div{font-size:10px;color:#687689;display:flex;justify-content:space-between;gap:5px}.analyticsDistrictLegend b{color:#173653}
 .analyticsBarChart{height:350px;display:flex;align-items:flex-end;gap:9px;padding:18px 6px 5px;border-bottom:1px solid #e3e8ee;background:linear-gradient(180deg,#fff,#fbfcfe);border-radius:12px}
 .analyticsBarGroup{height:100%;flex:1;display:flex;align-items:flex-end;justify-content:center;gap:3px;min-width:28px;position:relative}.analyticsBar{width:13px;min-height:3px;border-radius:5px 5px 0 0;position:relative}.analyticsBar.primary{background:linear-gradient(180deg,#f7ca4e,#dfa91d)}.analyticsBar.secondary{background:linear-gradient(180deg,#173d67,#0d2d4e)}.analyticsBarValue{position:absolute;top:-17px;left:50%;transform:translateX(-50%);font-size:7.5px;color:#718095;white-space:nowrap}.analyticsBarLabel{position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);font-size:9px;color:#5d6c80;white-space:nowrap}.analyticsChartLegend{display:flex;justify-content:flex-start;gap:15px;margin-top:7px;font-size:10px;color:#657286}.analyticsChartLegend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-left:4px;vertical-align:-1px}.analyticsChartLegend .primary{background:#e4ad27}.analyticsChartLegend .secondary{background:#12385d}
@@ -1765,20 +1766,86 @@ function analyticsSchoolDetail(s){
     '<div class="analyticsDetailLine"><span>آدرس</span><b>'+esc(s.address||'—')+'</b></div>'+
     '<button class="btn analyticsDetailAction" onclick="goTab(\'schools\')">مشاهده در بخش مدارس</button>';
 }
+function analyticsDistrictSortKey(r){
+  const t=String(r?.district_title||'');
+  const m=t.match(/(?:ناحیه\\s*)?([1-7])(?:\\D|$)/);
+  if(m && /ناحیه|district/i.test(t)) return Number(m[1]);
+  if(t.includes('تبادکان')) return 8;
+  return 99;
+}
+function analyticsConvexHull(points){
+  const pts=(points||[]).map(p=>[Number(p.lng),Number(p.lat)]).filter(p=>Number.isFinite(p[0])&&Number.isFinite(p[1])).sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
+  if(pts.length<=2)return pts;
+  const cross=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);
+  const lower=[];
+  for(const p of pts){while(lower.length>=2&&cross(lower[lower.length-2],lower[lower.length-1],p)<=0)lower.pop();lower.push(p);}
+  const upper=[];
+  for(let i=pts.length-1;i>=0;i--){const p=pts[i];while(upper.length>=2&&cross(upper[upper.length-2],upper[upper.length-1],p)<=0)upper.pop();upper.push(p);}
+  upper.pop();lower.pop();return lower.concat(upper);
+}
+function analyticsDistrictSchools(){
+  const rows=ANALYTICS_CACHE?.schools||[],by={};
+  rows.forEach(s=>{
+    if(s.lat===null||s.lng===null||s.lat===undefined||s.lng===undefined)return;
+    const id=String(s.district_id||'unknown');
+    (by[id]||(by[id]=[])).push(s);
+  });
+  return by;
+}
 function analyticsRenderDistrictMap(){
-  const host=document.getElementById('analyticsDistrictMap');if(!host)return;
-  const all=ANALYTICS_CACHE?.by_district||[];
-  const list=[...all].sort((a,b)=>Number(a.district_id)-Number(b.district_id)).slice(0,8);
-  host.innerHTML='<div class="analyticsMapCenter">مشهد<br><span style="font-size:9px">توزیع مدارس</span></div>'+
-    list.map((r,i)=>r?'<button class="analyticsDistrictShape '+(i%2?'gold':'blue')+' '+(String(r.district_id)===String(ANALYTICS_FILTER_DISTRICT)?'active':'')+'" data-d="'+(i+1)+'" onclick="setAnalyticsDistrict(\''+esc(r.district_id)+'\')">ناحیه '+esc((r.district_title||'').replace(/ناحیه\s*/,'')||String(i+1))+'<small style="display:block;font-size:8px;margin-top:2px">'+analyticsNum(r.school_count)+' مدرسه</small></button>':'').join('')+
-    '<div class="analyticsDistrictLegend">'+all.slice(0,8).map(r=>'<div><span>'+esc(r.district_title||'نامشخص')+'</span><b>'+analyticsNum(r.student_count)+' نفر</b></div>').join('')+'</div>';
+  const host=document.getElementById('analyticsDistrictMap');if(!host||typeof L==='undefined')return;
+  const all=[...(ANALYTICS_CACHE?.by_district||[])].sort((a,b)=>analyticsDistrictSortKey(a)-analyticsDistrictSortKey(b)||String(a.district_title||'').localeCompare(String(b.district_title||'')));
+  const by=analyticsDistrictSchools();
+  try{
+    const mapObj=createMap('analyticsDistrictMap',{lat:36.297,lng:59.606,zoom:11});
+    const map=mapObj.raw;if(!map)return;
+    const bounds=[];
+    const palette=['#1769aa','#d69a19','#16826a','#8b4fa3','#b04a38','#287b9d','#5d7f2d','#8a5b2d'];
+    all.forEach((r,i)=>{
+      const schools=by[String(r.district_id)]||[];
+      const points=schools.map(s=>[Number(s.lng),Number(s.lat)]);
+      points.forEach(p=>bounds.push([p[1],p[0]]));
+      const color=palette[i%palette.length];
+      const selected=String(r.district_id)===String(ANALYTICS_FILTER_DISTRICT);
+      const popup='<div><b>ناحیه '+esc(String(r.district_title||'').replace(/ناحیه\\s*/,'')||'—')+'</b><br>مدارس فعال: '+analyticsNum(r.school_count)+'<br>دانش‌آموز: '+analyticsNum(r.student_count)+'</div>';
+      if(points.length>=3){
+        const hull=analyticsConvexHull(schools);
+        const latlngs=hull.map(p=>[p[1],p[0]]);
+        const poly=L.polygon(latlngs,{color,weight:selected?4:2,opacity:.9,fillColor:color,fillOpacity:selected?.28:.13});
+        poly.bindPopup(popup);
+        poly.on('click',()=>setAnalyticsDistrict(r.district_id));
+        poly.addTo(map);
+        const center=poly.getBounds().getCenter();
+        L.marker(center,{interactive:false,icon:L.divIcon({html:'<div class="analyticsDistrictLabel">ناحیه '+esc(String(r.district_title||'').replace(/ناحیه\\s*/,'')||'—')+'</div>',className:'',iconSize:[70,30],iconAnchor:[35,15]})}).addTo(map);
+      }else if(points.length===2){
+        const line=L.polyline(points.map(p=>[p[1],p[0]]),{color,weight:selected?6:4,opacity:.75});
+        line.bindPopup(popup);line.on('click',()=>setAnalyticsDistrict(r.district_id));line.addTo(map);
+      }else if(points.length===1){
+        const circle=L.circle([points[0][1],points[0][0]],{radius:250,color,weight:selected?4:2,fillColor:color,fillOpacity:.18});
+        circle.bindPopup(popup);circle.on('click',()=>setAnalyticsDistrict(r.district_id));circle.addTo(map);
+      }
+    });
+    if(bounds.length)map.fitBounds(bounds,{padding:[24,24],maxZoom:12});
+  }catch(e){console.warn('analytics district map failed',e);}
 }
 function analyticsRenderLevelChart(rows){
   const host=document.getElementById('analyticsLevelChart');if(!host)return;
-  if(!rows.length){host.innerHTML='<div class="analyticsEmpty">داده‌ای برای نمایش وجود ندارد.</div>';return;}
-  const max=Math.max(1,...rows.map(r=>Math.max(Number(r.primary_students||0),Number(r.secondary_students||0))));
-  const ordered=[...rows].sort((a,b)=>Number(a.district_id)-Number(b.district_id));
-  host.innerHTML=ordered.slice(0,8).map((r,i)=>{const p=Number(r.primary_students||0),s=Number(r.secondary_students||0),ph=Math.max(3,Math.round(p/max*285)),sh=Math.max(3,Math.round(s/max*285));return '<div class="analyticsBarGroup"><div class="analyticsBar primary" style="height:'+ph+'px"><span class="analyticsBarValue">'+analyticsNum(p)+'</span></div><div class="analyticsBar secondary" style="height:'+sh+'px"><span class="analyticsBarValue">'+analyticsNum(s)+'</span></div><span class="analyticsBarLabel">ناحیه '+esc((r.district_title||'').replace(/ناحیه\s*/,'')||String(i+1))+'</span></div>';}).join('');
+  const districts=[...(rows||[])].sort((a,b)=>analyticsDistrictSortKey(a)-analyticsDistrictSortKey(b));
+  if(!districts.length){host.innerHTML='<div class="analyticsEmpty">داده‌ای برای نمایش وجود ندارد.</div>';return;}
+  const grouped={};
+  analyticsSchoolsRows().forEach(s=>{
+    const id=String(s.district_id||'');
+    if(!grouped[id])grouped[id]={primary:0,secondary:0};
+    const n=Number(s.student_count||0),lv=String(s.level||'');
+    if(lv.includes('دبستان'))grouped[id].primary+=n;
+    else if(lv.includes('دبیرستان')||lv.includes('متوسطه'))grouped[id].secondary+=n;
+  });
+  const vals=districts.map(r=>({r,p:Number(grouped[String(r.district_id)]?.primary||0),s:Number(grouped[String(r.district_id)]?.secondary||0)}));
+  const max=Math.max(1,...vals.map(x=>Math.max(x.p,x.s)));
+  host.innerHTML=vals.slice(0,8).map((x,i)=>{
+    const ph=Math.max(3,Math.round(x.p/max*285)),sh=Math.max(3,Math.round(x.s/max*285));
+    return '<div class="analyticsBarGroup"><div class="analyticsBar primary" style="height:'+ph+'px"><span class="analyticsBarValue">'+analyticsNum(x.p)+'</span></div><div class="analyticsBar secondary" style="height:'+sh+'px"><span class="analyticsBarValue">'+analyticsNum(x.s)+'</span></div><span class="analyticsBarLabel">'+esc(String(x.r.district_title||'').replace(/ناحیه\\s*/,'')||String(i+1))+'</span></div>';
+  }).join('');
 }
 function analyticsRenderDonut(rows){
   const host=document.getElementById('analyticsDonutBox');if(!host)return;
@@ -1820,7 +1887,7 @@ function setAnalyticsDistrict(id){
 }
 function analyticsRenderAll(){
   const rows=analyticsDistrictRows(),schools=analyticsSchoolsRows(),allDistricts=ANALYTICS_CACHE?.by_district||[];
-  analyticsRenderDistrictMap();analyticsRenderLevelChart(rows.length?rows:allDistricts);analyticsRenderDonut(schools.length?schools:(ANALYTICS_CACHE?.schools||[]));analyticsRenderCompanies();
+  analyticsRenderDistrictMap();analyticsRenderLevelChart(rows.length?rows:allDistricts);analyticsRenderDonut(ANALYTICS_FILTER_DISTRICT?schools:(ANALYTICS_CACHE?.schools||[]));analyticsRenderCompanies();
   if(!ANALYTICS_SELECTED_COMPANY){const cs=analyticsCompaniesRows();ANALYTICS_SELECTED_COMPANY=cs[0]||null;}
   analyticsRenderCompanySchools();
   const first=analyticsCompanySchools()[0]||schools[0]||null;
@@ -1842,7 +1909,7 @@ async function renderAnalytics(){
       '<div class="analyticsBody">'+
         '<section class="analyticsMain">'+
           '<div class="analyticsTopArea">'+
-            '<div class="analyticsPanel analyticsDistrictPanel"><div class="analyticsPanelTitle"><h3>توزیع مدارس در ۸ ناحیه آموزش و پرورش مشهد</h3><small id="analyticsScopeCount">همه نواحی</small></div><div id="analyticsDistrictMap" class="analyticsMapStage"></div></div>'+
+            '<div class="analyticsPanel analyticsDistrictPanel"><div class="analyticsPanelTitle"><h3>توزیع مدارس در ۸ ناحیه آموزش و پرورش مشهد</h3><small id="analyticsScopeCount">همه نواحی</small></div><div id="analyticsDistrictMap" class="analyticsMapStage"></div><div class="analyticsMapNote">مرزها به‌صورت تقریبی و بر اساس پراکندگی موقعیت مدارس فعال ترسیم می‌شوند؛ آمار فقط مدارس و شرکت‌های فعال را شامل می‌شود.</div></div>'+
             '<div class="analyticsPanel analyticsChartPanel"><div class="analyticsPanelTitle"><h3>تعداد دانش‌آموزان به تفکیک مقطع تحصیلی</h3><small>ابتدایی / متوسطه</small></div><div id="analyticsLevelChart" class="analyticsBarChart"></div><div class="analyticsChartLegend"><span><i class="primary"></i>دبستان</span><span><i class="secondary"></i>دبیرستان / متوسطه</span></div></div>'+
             '<div class="analyticsPanel analyticsDonutPanel"><div class="analyticsPanelTitle"><h3>سهم مقاطع تحصیلی از کل دانش‌آموزان</h3><small>بر اساس اطلاعات مدارس</small></div><div id="analyticsDonutBox"></div></div>'+
           '</div>'+
