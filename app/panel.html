@@ -1747,8 +1747,29 @@ function analyticsLevelTotals(rows){
   });
   return {primary,secondary,other,total:primary+secondary+other};
 }
-function analyticsDistrictRows(){const d=ANALYTICS_CACHE||{};return(d.by_district||[]).filter(x=>!ANALYTICS_FILTER_DISTRICT||String(x.district_id)===String(ANALYTICS_FILTER_DISTRICT));}
-function analyticsSchoolsRows(){const d=ANALYTICS_CACHE||{};return(d.schools||[]).filter(x=>!ANALYTICS_FILTER_DISTRICT||String(x.district_id)===String(ANALYTICS_FILTER_DISTRICT));}
+function analyticsDistrictFilterKey(value){
+  const raw=String(value??'').trim();
+  if(!raw)return '';
+  const t=raw.replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+  const m=t.match(/(?:ناحیه|منطقه|district)\\s*([1-7])(?:\\D|$)/i)||t.match(/(?:^|\\s)([1-7])(?:\\s|$)/);
+  if(m)return String(m[1]);
+  if(t.includes('تبادکان'))return 'tabadkan';
+  return raw;
+}
+function analyticsDistrictMatches(row,selected){
+  if(!selected)return true;
+  const a=String(row?.district_id??'').trim(),b=String(selected).trim();
+  if(a===b)return true;
+  return analyticsDistrictFilterKey(row?.district_title)===analyticsDistrictFilterKey(selected);
+}
+function analyticsDistrictRows(){
+  const d=ANALYTICS_CACHE||{};
+  return(d.by_district||[]).filter(x=>analyticsDistrictMatches(x,ANALYTICS_FILTER_DISTRICT));
+}
+function analyticsSchoolsRows(){
+  const d=ANALYTICS_CACHE||{};
+  return(d.schools||[]).filter(x=>analyticsDistrictMatches(x,ANALYTICS_FILTER_DISTRICT));
+}
 function analyticsCompaniesRows(){
   const agg={};
   analyticsSchoolsRows().forEach(s=>{const key=String(s.company_id||'none');if(!agg[key])agg[key]={company_id:s.company_id||0,company_title:s.company_title||'بدون شرکت',school_count:0,student_count:0};agg[key].school_count++;agg[key].student_count+=Number(s.student_count||0);});
@@ -1794,8 +1815,8 @@ function analyticsDistrictSchools(){
   const rows=ANALYTICS_CACHE?.schools||[],by={};
   rows.forEach(s=>{
     if(s.lat===null||s.lng===null||s.lat===undefined||s.lng===undefined)return;
-    const id=String(s.district_id||'unknown');
-    (by[id]||(by[id]=[])).push(s);
+    const key=analyticsDistrictNumber(s);
+    (by[key]||(by[key]=[])).push(s);
   });
   return by;
 }
@@ -1851,9 +1872,9 @@ function analyticsRenderDistrictMap(){
     const map=mapObj.raw;if(!map)return;
     const bounds=[];
     const palette=['#1769aa','#d69a19','#16826a','#8b4fa3','#b04a38','#287b9d','#5d7f2d','#8a5b2d'];
-    const visibleDistricts=ANALYTICS_SHOW_ALL_DISTRICTS?all:all.filter(r=>String(r.district_id)===String(ANALYTICS_FILTER_DISTRICT));
+    const visibleDistricts=ANALYTICS_SHOW_ALL_DISTRICTS?all:all.filter(r=>analyticsDistrictMatches(r,ANALYTICS_FILTER_DISTRICT));
     visibleDistricts.forEach((r,i)=>{
-      const schools=by[String(r.district_id)]||[];
+      const schools=by[analyticsDistrictNumber(r)]||[];
       const points=schools.map(s=>[Number(s.lng),Number(s.lat)]);
       points.forEach(p=>bounds.push([p[1],p[0]]));
       const color=palette[i%palette.length];
@@ -1895,7 +1916,7 @@ function analyticsRenderLevelChart(rows){
   if(!districts.length){host.innerHTML='<div class="analyticsEmpty">داده‌ای برای نمایش وجود ندارد.</div>';return;}
   const grouped={};
   analyticsSchoolsRows().forEach(s=>{
-    const id=String(s.district_id||'');
+    const id=analyticsDistrictNumber(s);
     if(!grouped[id])grouped[id]={primary:0,secondary:0};
     const n=Number(s.student_count||0),lv=String(s.level||'').trim();
     if(lv==='ابتدایی')grouped[id].primary+=n;
