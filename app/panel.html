@@ -1889,7 +1889,15 @@ function analyticsRenderDistrictMap(){
   if(!host||typeof L==='undefined')return;
   const all=[...(ANALYTICS_CACHE?.by_district||[])].sort((a,b)=>analyticsDistrictSortKey(a)-analyticsDistrictSortKey(b)||String(a.district_title||'').localeCompare(String(b.district_title||'')));
   const by=analyticsDistrictSchools();
-  const selectedKey=analyticsDistrictFilterKey(ANALYTICS_FILTER_DISTRICT);
+  // district_id در API ممکن است عدد، رشته یا شناسه‌ای غیرعددی باشد؛
+  // ابتدا رکورد واقعی ناحیه انتخاب‌شده را پیدا می‌کنیم و سپس کلید استاندارد
+  // آن را برای فیلتر polygon به‌کار می‌بریم.
+  const selectedRow=!ANALYTICS_SHOW_ALL_DISTRICTS
+    ? all.find(r=>analyticsDistrictMatches(r,ANALYTICS_FILTER_DISTRICT))
+    : null;
+  const selectedKey=selectedRow
+    ? analyticsDistrictNumber(selectedRow)
+    : analyticsDistrictFilterKey(ANALYTICS_FILTER_DISTRICT);
   try{
     const mapObj=createMap('analyticsDistrictMap',{lat:36.297,lng:59.606,zoom:11});
     const map=mapObj.raw;if(!map)return;
@@ -1902,7 +1910,7 @@ function analyticsRenderDistrictMap(){
      */
     const visibleDistricts=ANALYTICS_SHOW_ALL_DISTRICTS
       ? all
-      : all.filter(r=>analyticsDistrictNumber(r)===selectedKey);
+      : (selectedRow ? [selectedRow] : []);
 
     const bounds=[];
     const palette=['#1769aa','#d69a19','#16826a','#8b4fa3','#b04a38','#287b9d','#5d7f2d','#8a5b2d'];
