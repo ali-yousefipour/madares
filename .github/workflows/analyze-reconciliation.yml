@@ -81,10 +81,76 @@ jobs:
           out['parsed_data']={k:{'count':len(v),'columns':list(v[0].keys()) if v else [],'rows':v} for k,v in parsed.items()}
           out['sql']={'file':sf,'bytes':len(s.encode()),'tables':creates,'insert_statements':inserts,'school_related_tables':[x['table'] for x in creates if re.search(r'school|madres|student',x['table'],re.I)],'head':s[:5000],'tail':s[-5000:],'keywords':{k:len(re.findall(k,s,re.I)) for k in ['CREATE','INSERT','UPDATE','VALUES','school','student','district','students']}}
           out['sql']['schools_definition']=next((x['definition'] for x in creates if x['table']=='schools'),'')
+          from difflib import SequenceMatcher
+          import unicodedata,hashlib
+          def norm(v):
+            if v is None: return ''
+            s=str(v).strip().lower()
+            for a,b in {'ي':'ی','ى':'ی','ك':'ک','ۀ':'ه','ة':'ه','ؤ':'و','إ':'ا','أ':'ا','ٱ':'ا'}.items(): s=s.replace(a,b)
+            s=unicodedata.normalize('NFKC',s)
+            s=''.join(ch for ch in s if not unicodedata.category(ch).startswith('P') and not ch.isspace())
+            return s
+          def sim(a,b): return SequenceMatcher(None,norm(a),norm(b)).ratio()
+          district_by_title={norm(r['title']):int(r['id']) for r in parsed['districts'] if r.get('is_active')=='1'}
+          district_title_by_id={int(r['id']):r['title'] for r in parsed['districts']}
+          company_by_id={int(r['id']):r for r in parsed['companies'] if r.get('id') and str(r['id']).isdigit()}
+          company_exact={norm(r.get('title')):int(r['id']) for r in company_by_id.values() if r.get('title')}
+          def company_match(name):
+            if not name: return (None,0,'none')
+            n=norm(name)
+            if n in company_exact: return (company_exact[n],1,'exact')
+            best=(None,0,'none')
+            for r in company_by_id.values():
+              sc=sim(name,r.get('title'))
+              if sc>best[1]: best=(int(r['id']),sc,'fuzzy')
+            return best
+          excel_rows=out['excel']['همه_مدارس_Excel']['all_rows']
+          db_rows=parsed['schools']
+          db_by_id={int(r['id']):r for r in db_rows if r.get('id') and str(r['id']).isdigit()}
+          def level_score(a,b):
+            if not a or not b: return 0.35
+            na,nb=norm(a),norm(b)
+            if na==nb: return 1.0
+            groups=[('دبستان','ابتدایی','دبستاندورهاول','ابتداییدورهاول','ابتداییدورهدوم','ابتداییدورهاولودوم'),('دبیرستان','دبیرستان1','دبیرستان2','دبیرستاندورهاول','دبیرستاندورهدوم','متوسطهدورهاول','متوسطهدورهدوم','دبیرستادورهاول'),('هنرستان',),('پیشدبستانی',),('مهد',)]
+            for g in groups:
+              if na in [norm(x) for x in g] and nb in [norm(x) for x in g]: return 0.85
+            return sim(a,b)
+          company_cache={}
+          for r in out['excel']['شرکتها']['all_rows']:
+            cid,cs,cm=company_match(r[0]); company_cache[norm(r[0])]={'id':cid,'score':cs,'method':cm}
+          matched={}; used=set(); ambiguous=[]
+          for i,r in enumerate(excel_rows):
+            excel_name=r[3]; excel_level=r[4]; excel_dist=r[2]; excel_company=r[6]; excel_dist_id=district_by_title.get(norm(excel_dist))
+            hint=r[9] if len(r)>9 else None
+            if hint is not None and int(hint) in db_by_id and r[7]=='انجام شد':
+              d=db_by_id[int(hint)]; matched[i]={'db_id':int(hint),'score':1.0,'method':'previous_report_db_id','name_score':sim(excel_name,d.get('name')),'level_score':level_score(excel_level,d.get('level')),'company_score':sim(excel_company,company_by_id.get(int(d['company_id']),{}).get('title')) if d.get('company_id') and str(d.get('company_id')).isdigit() else 0,'district_ok':str(d.get('district_id'))==str(excel_dist_id)}; used.add(int(hint)); continue
+            candidates=[]
+            for d in db_rows:
+              if not d.get('id') or not str(d['id']).isdigit() or int(d['id']) in used: continue
+              did=int(d['id']); ddid=int(d['district_id']) if d.get('district_id') and str(d.get('district_id')).isdigit() else None
+              district_ok=(excel_dist_id is not None and ddid==excel_dist_id)
+              ns=sim(excel_name,d.get('name')); ls=level_score(excel_level,d.get('level'))
+              if district_ok: base=ns*0.68+ls*0.20
+              else: base=ns*0.55+ls*0.15
+              cm=company_cache.get(norm(excel_company),{'id':None,'score':0}) if excel_company else {'id':None,'score':0}
+              comp=1 if cm.get('id') and d.get('company_id') and str(d.get('company_id')).isdigit() and int(d['company_id'])==cm['id'] else 0
+              student=abs(int(d.get('student_count') or 0)-int(r[5] or 0)); student_score=1/(1+student/100)
+              score=base+0.10*comp+0.05*student_score+(0.12 if district_ok else 0)
+              candidates.append((score,ns,ls,comp,student,d))
+            candidates.sort(key=lambda z:z[0],reverse=True)
+            if candidates:
+              best=candidates[0]; second=candidates[1][0] if len(candidates)>1 else 0
+              if (best[1]>=0.94 and best[2]>=0.5 and (best[0]-second>=0.015 or best[1]>=0.98)) or (best[1]>=0.985 and best[2]>=0.35):
+                d=best[5]; did=int(d['id']); matched[i]={'db_id':did,'score':round(best[0],4),'method':'fuzzy_name_district_level','name_score':round(best[1],4),'level_score':round(best[2],4),'company_score':best[3],'district_ok':str(d.get('district_id'))==str(excel_dist_id)}; used.add(did)
+              else: ambiguous.append({'excel_index':i,'name':excel_name,'district':excel_dist,'level':excel_level,'company':excel_company,'best_score':round(best[0],4),'name_score':round(best[1],4),'candidates':[{'id':int(z[5]['id']),'name':z[5].get('name'),'district':district_title_by_id.get(int(z[5]['district_id'])) if z[5].get('district_id') and str(z[5].get('district_id')).isdigit() else None,'level':z[5].get('level'),'score':round(z[0],4)} for z in candidates[:5]]})
+          new_rows=[{'excel_index':i,'row':r} for i,r in enumerate(excel_rows) if i not in matched]
+          inactive=[int(r['id']) for r in db_rows if r.get('id') and str(r['id']).isdigit() and int(r['id']) not in used]
+          out['reconciliation']={'excel_count':len(excel_rows),'matched_count':len(matched),'new_count':len(new_rows),'ambiguous_count':len(ambiguous),'db_count':len(db_rows),'deactivate_count':len(inactive),'excel_students':sum(int(r[5] or 0) for r in excel_rows),'matched_db_ids':sorted(used),'new_rows':new_rows,'ambiguous':ambiguous,'inactive_db_ids':inactive,'company_matches':company_cache,'districts':district_title_by_id}
           os.makedirs('analysis',exist_ok=True)
-          json.dump(out,open('analysis/summary.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
+          json.dump(out,open('analysis/reconciliation.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
+          open('analysis/summary.json','w',encoding='utf-8').write(json.dumps(out,ensure_ascii=False,indent=2))
           PY
       - uses: actions/upload-artifact@v4
         with:
           name: reconciliation-analysis
-          path: analysis/summary.json
+          path: analysis
