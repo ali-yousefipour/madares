@@ -1738,7 +1738,12 @@ function analyticsNum(v){return Number(v||0).toLocaleString('fa-IR');}
 function analyticsPct(v,total){return total?Math.round(Number(v||0)/Number(total||1)*100):0;}
 function analyticsLevelTotals(rows){
   let primary=0,secondary=0,other=0;
-  (rows||[]).forEach(r=>{const n=Number(r.student_count||0),lv=String(r.level||'');if(lv.includes('دبستان'))primary+=n;else if(lv.includes('دبیرستان')||lv.includes('متوسطه'))secondary+=n;else other+=n;});
+  (rows||[]).forEach(r=>{
+    const n=Number(r.student_count||0),lv=String(r.level||'').trim();
+    if(lv==='ابتدایی') primary+=n;
+    else if(lv==='متوسطه') secondary+=n;
+    else other+=n;
+  });
   return {primary,secondary,other,total:primary+secondary+other};
 }
 function analyticsDistrictRows(){const d=ANALYTICS_CACHE||{};return(d.by_district||[]).filter(x=>!ANALYTICS_FILTER_DISTRICT||String(x.district_id)===String(ANALYTICS_FILTER_DISTRICT));}
@@ -1866,9 +1871,9 @@ function analyticsRenderLevelChart(rows){
   analyticsSchoolsRows().forEach(s=>{
     const id=String(s.district_id||'');
     if(!grouped[id])grouped[id]={primary:0,secondary:0};
-    const n=Number(s.student_count||0),lv=String(s.level||'');
-    if(lv.includes('دبستان'))grouped[id].primary+=n;
-    else if(lv.includes('دبیرستان')||lv.includes('متوسطه'))grouped[id].secondary+=n;
+    const n=Number(s.student_count||0),lv=String(s.level||'').trim();
+    if(lv==='ابتدایی')grouped[id].primary+=n;
+    else if(lv==='متوسطه')grouped[id].secondary+=n;
   });
   const vals=districts.map(r=>({r,p:Number(grouped[String(r.district_id)]?.primary||0),s:Number(grouped[String(r.district_id)]?.secondary||0)}));
   const max=Math.max(1,...vals.map(x=>Math.max(x.p,x.s)));
@@ -1880,7 +1885,7 @@ function analyticsRenderLevelChart(rows){
 function analyticsRenderDonut(rows){
   const host=document.getElementById('analyticsDonutBox');if(!host)return;
   const t=analyticsLevelTotals(rows),p=t.total?Math.round(t.primary/t.total*100):0;
-  host.innerHTML='<div class="analyticsDonutWrap"><div class="analyticsDonut" style="--primary-p:'+p+'%"><div class="analyticsDonutCenter"><div><b>'+analyticsNum(t.total)+'</b>دانش‌آموز</div></div></div><div class="analyticsLegendList"><div class="analyticsLegendItem"><i style="background:#e6b12b"></i><div><b>'+analyticsNum(t.primary)+'</b>دبستان — '+p+'٪</div></div><div class="analyticsLegendItem"><i style="background:#12385d"></i><div><b>'+analyticsNum(t.secondary)+'</b>دبیرستان/متوسطه — '+analyticsPct(t.secondary,t.total)+'٪</div></div>'+(t.other?'<div class="analyticsLegendItem"><i style="background:#a8b3c1"></i><div><b>'+analyticsNum(t.other)+'</b>سایر — '+analyticsPct(t.other,t.total)+'٪</div></div>':'')+'</div></div>';
+  host.innerHTML='<div class="analyticsDonutWrap"><div class="analyticsDonut" style="--primary-p:'+p+'%"><div class="analyticsDonutCenter"><div><b>'+analyticsNum(t.total)+'</b>دانش‌آموز</div></div></div><div class="analyticsLegendList"><div class="analyticsLegendItem"><i style="background:#e6b12b"></i><div><b>'+analyticsNum(t.primary)+'</b>ابتدایی — '+p+'٪</div></div><div class="analyticsLegendItem"><i style="background:#12385d"></i><div><b>'+analyticsNum(t.secondary)+'</b>متوسطه — '+analyticsPct(t.secondary,t.total)+'٪</div></div>'+(t.other?'<div class="analyticsLegendItem"><i style="background:#a8b3c1"></i><div><b>'+analyticsNum(t.other)+'</b>سایر — '+analyticsPct(t.other,t.total)+'٪</div></div>':'')+'</div></div>';
 }
 function analyticsRenderCompanies(){
   const host=document.getElementById('analyticsCompanyList');if(!host)return;
