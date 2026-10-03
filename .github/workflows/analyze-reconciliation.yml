@@ -29,9 +29,9 @@ jobs:
             creates.append({'table':m.group(1),'definition':m.group(2)[:20000]})
           inserts={}
           for m in re.finditer(r'INSERT INTO\s+[`]?([^\s`(]+)[`]?',s,re.I): inserts[m.group(1)]=inserts.get(m.group(1),0)+1
-          def extract_insert(table):
-            tick=chr(96); m=re.search(r'INSERT INTO\s+'+tick+'?'+re.escape(table)+tick+'?'+r'\s*\((.*?)\)\s*VALUES\s*(.*?);',s,re.I|re.S)
-            return m
+          def extract_inserts(table):
+            tick=chr(96); pat=r'INSERT INTO\s+'+tick+'?'+re.escape(table)+tick+'?'+r'\s*\((.*?)\)\s*VALUES\s*(.*?);'
+            return re.finditer(pat,s,re.I|re.S)
           def split_rows(v):
             rows=[]; buf=[]; q=False; esc=False; depth=0; i=0; active=False
             while i<len(v):
@@ -74,10 +74,10 @@ jobs:
             return out
           parsed={}
           for table in ['districts','companies','schools']:
-            m=extract_insert(table)
-            if not m: parsed[table]=[]; continue
-            cols=[x.strip().strip(chr(96)) for x in m.group(1).split(',')]
-            parsed[table]=[dict(zip(cols,parse_tuple(r))) for r in split_rows(m.group(2))]
+            ms=list(extract_inserts(table))
+            if not ms: parsed[table]=[]; continue
+            cols=[x.strip().strip(chr(96)) for x in ms[0].group(1).split(',')]
+            parsed[table]=[dict(zip(cols,parse_tuple(r))) for m in ms for r in split_rows(m.group(2))]
           out['parsed_data']={k:{'count':len(v),'columns':list(v[0].keys()) if v else [],'rows':v} for k,v in parsed.items()}
           out['sql']={'file':sf,'bytes':len(s.encode()),'tables':creates,'insert_statements':inserts,'school_related_tables':[x['table'] for x in creates if re.search(r'school|madres|student',x['table'],re.I)],'head':s[:5000],'tail':s[-5000:],'keywords':{k:len(re.findall(k,s,re.I)) for k in ['CREATE','INSERT','UPDATE','VALUES','school','student','district','students']}}
           out['sql']['schools_definition']=next((x['definition'] for x in creates if x['table']=='schools'),'')
