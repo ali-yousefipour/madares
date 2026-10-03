@@ -3547,16 +3547,42 @@ route('GET','/api/admin/analytics',function($p,$b,$u){
   $districts=Db::all("SELECT d.id district_id,d.title district_title,COUNT(s.id) school_count,COALESCE(SUM(s.student_count),0) student_count
     FROM districts d JOIN schools s ON s.district_id=d.id AND s.is_active=1
     JOIN companies c ON c.id=s.company_id AND c.is_active=1
-    WHERE d.is_active=1 GROUP BY d.id,d.title ORDER BY school_count DESC,d.title");
+    WHERE d.is_active=1
+    GROUP BY d.id,d.title
+    ORDER BY
+      CASE
+        WHEN d.title REGEXP '(^|[^0-9])1([^0-9]|$)' THEN 1
+        WHEN d.title REGEXP '(^|[^0-9])2([^0-9]|$)' THEN 2
+        WHEN d.title REGEXP '(^|[^0-9])3([^0-9]|$)' THEN 3
+        WHEN d.title REGEXP '(^|[^0-9])4([^0-9]|$)' THEN 4
+        WHEN d.title REGEXP '(^|[^0-9])5([^0-9]|$)' THEN 5
+        WHEN d.title REGEXP '(^|[^0-9])6([^0-9]|$)' THEN 6
+        WHEN d.title REGEXP '(^|[^0-9])7([^0-9]|$)' THEN 7
+        WHEN d.title LIKE '%تبادکان%' THEN 8
+        ELSE 99
+      END,
+      d.title");
   $companies=Db::all("SELECT c.id company_id,c.title company_title,COUNT(s.id) school_count,COALESCE(SUM(s.student_count),0) student_count
     FROM companies c JOIN schools s ON s.company_id=c.id AND s.is_active=1
     WHERE c.is_active=1 GROUP BY c.id,c.title ORDER BY school_count DESC,c.title");
   $levels=Db::all("SELECT COALESCE(NULLIF(TRIM(s.level),''),'نامشخص') level,COUNT(*) school_count,COALESCE(SUM(s.student_count),0) student_count
     FROM schools s JOIN companies c ON c.id=s.company_id AND c.is_active=1
     WHERE s.is_active=1 GROUP BY COALESCE(NULLIF(TRIM(s.level),''),'نامشخص') ORDER BY school_count DESC");
-  $schools=Db::all("SELECT s.id,s.code,s.name,s.student_count,s.level,s.district_id,d.title district_title,s.company_id,c.title company_title
+  $schools=Db::all("SELECT s.id,s.code,s.name,s.student_count,s.level,s.district_id,d.title district_title,s.company_id,c.title company_title,s.lat,s.lng
     FROM schools s JOIN companies c ON c.id=s.company_id AND c.is_active=1 LEFT JOIN districts d ON d.id=s.district_id
-    WHERE s.is_active=1 ORDER BY d.title,s.name");
+    WHERE s.is_active=1 ORDER BY
+      CASE
+        WHEN d.title REGEXP '(^|[^0-9])1([^0-9]|$)' THEN 1
+        WHEN d.title REGEXP '(^|[^0-9])2([^0-9]|$)' THEN 2
+        WHEN d.title REGEXP '(^|[^0-9])3([^0-9]|$)' THEN 3
+        WHEN d.title REGEXP '(^|[^0-9])4([^0-9]|$)' THEN 4
+        WHEN d.title REGEXP '(^|[^0-9])5([^0-9]|$)' THEN 5
+        WHEN d.title REGEXP '(^|[^0-9])6([^0-9]|$)' THEN 6
+        WHEN d.title REGEXP '(^|[^0-9])7([^0-9]|$)' THEN 7
+        WHEN d.title LIKE '%تبادکان%' THEN 8
+        ELSE 99
+      END,
+      d.title,s.name");
   return ['summary'=>$summary,'by_district'=>$districts,'by_company'=>$companies,'by_level'=>$levels,'schools'=>$schools];
 },false,'admin');
 
