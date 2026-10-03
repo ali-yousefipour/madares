@@ -439,7 +439,7 @@ table{border-spacing:0 7px;border-collapse:separate}thead th{background:#eef3f9;
 .analyticsMapStage .leaflet-control-zoom{margin:10px}
 .analyticsMapStage .leaflet-popup-content{direction:rtl;text-align:right;font-family:"Vazirmatn","Vazir",Tahoma,sans-serif;font-size:11px;line-height:1.8}
 .analyticsMapStage .analyticsDistrictLabel{background:rgba(18,56,93,.92);border:2px solid #fff;border-radius:999px;color:#fff;box-shadow:0 3px 12px rgba(0,0,0,.2);font-weight:900;font-size:10px;line-height:28px;text-align:center;white-space:nowrap}
-.analyticsMapNote{margin-top:7px;color:#788697;font-size:9px;text-align:right}
+.analyticsMapNote{margin-top:7px;color:#788697;font-size:9px;text-align:right}.analyticsAllDistrictsToggle{display:flex;align-items:center;gap:7px;margin-top:8px;padding:7px 10px;border:1px solid #dfe7ef;border-radius:9px;background:#f7f9fb;color:#173653;font-size:10px;font-weight:900;direction:rtl;cursor:pointer}.analyticsAllDistrictsToggle input{width:16px;height:16px;accent-color:#1769aa;cursor:pointer}.analyticsAllDistrictsToggle span{cursor:pointer}
 .analyticsChartPanel{min-height:210px}.analyticsDonutPanel{min-height:210px}
 .analyticsBottomGrid{display:grid;grid-template-columns:1.03fr 1.17fr .76fr;gap:12px}.analyticsCompanyList{max-height:310px;overflow:auto}.analyticsCompanyRow{display:grid;grid-template-columns:24px 1fr 52px 58px 48px;gap:5px;align-items:center;padding:7px 4px;border-bottom:1px solid #edf1f5;cursor:pointer;font-size:9px}.analyticsCompanyRow:hover,.analyticsCompanyRow.active{background:#fff8df}.analyticsCompanyRow b{font-size:9.5px;color:#28465f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.analyticsCompanyRow small{color:#8490a0;font-size:8px}.analyticsCompanyRow .rank{color:#8895a6}.analyticsCompanyRow .companyShare{font-weight:900;color:#173653;text-align:left}.analyticsCompanyHeader{display:grid;grid-template-columns:24px 1fr 52px 58px 48px;gap:5px;padding:6px 4px;background:#f0f4f8;color:#5e6d80;font-size:8px;font-weight:900}
 .analyticsSelectedCompany{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#10385d;color:#fff;border-radius:9px;padding:7px 9px;margin-bottom:7px;font-size:9px}.analyticsSelectedCompany b{font-size:10px;color:#fec617}.analyticsCompanySchoolTable{max-height:260px;overflow:auto}.analyticsCompanySchoolTable table{font-size:9px}.analyticsCompanySchoolTable th,.analyticsCompanySchoolTable td{padding:6px 4px}.analyticsCompanySchoolTable th{font-size:8px;background:#eef3f7}.analyticsCompanySchoolTable tr{cursor:pointer}.analyticsCompanySchoolTable tr:hover{background:#fff8df}
@@ -1732,6 +1732,7 @@ async function openSchoolDetail(id) {
 /* ==================== تحلیل و آمار ==================== */
 let ANALYTICS_CACHE=null;
 let ANALYTICS_FILTER_DISTRICT='';
+let ANALYTICS_SHOW_ALL_DISTRICTS=true;
 let ANALYTICS_SELECTED_COMPANY=null;
 let ANALYTICS_SELECTED_SCHOOL=null;
 function analyticsNum(v){return Number(v||0).toLocaleString('fa-IR');}
@@ -1850,7 +1851,8 @@ function analyticsRenderDistrictMap(){
     const map=mapObj.raw;if(!map)return;
     const bounds=[];
     const palette=['#1769aa','#d69a19','#16826a','#8b4fa3','#b04a38','#287b9d','#5d7f2d','#8a5b2d'];
-    all.forEach((r,i)=>{
+    const visibleDistricts=ANALYTICS_SHOW_ALL_DISTRICTS?all:all.filter(r=>String(r.district_id)===String(ANALYTICS_FILTER_DISTRICT));
+    visibleDistricts.forEach((r,i)=>{
       const schools=by[String(r.district_id)]||[];
       const points=schools.map(s=>[Number(s.lng),Number(s.lat)]);
       points.forEach(p=>bounds.push([p[1],p[0]]));
@@ -1939,8 +1941,18 @@ function selectAnalyticsSchool(id){
   document.querySelectorAll('.analyticsCompanySchoolTable tr').forEach(tr=>tr.classList.remove('active'));
 }
 function setAnalyticsDistrict(id){
-  ANALYTICS_FILTER_DISTRICT=String(id||'');ANALYTICS_SELECTED_COMPANY=null;ANALYTICS_SELECTED_SCHOOL=null;
+  ANALYTICS_FILTER_DISTRICT=String(id||'');
+  ANALYTICS_SHOW_ALL_DISTRICTS=!ANALYTICS_FILTER_DISTRICT;
+  ANALYTICS_SELECTED_COMPANY=null;ANALYTICS_SELECTED_SCHOOL=null;
   document.querySelectorAll('.analyticsDistrictBtn').forEach(b=>b.classList.toggle('active',String(b.dataset.id)===ANALYTICS_FILTER_DISTRICT));
+  const sel=document.getElementById('analyticsDistrictSelect');if(sel)sel.value=ANALYTICS_FILTER_DISTRICT;
+  const allCb=document.getElementById('analyticsAllDistricts');if(allCb)allCb.checked=ANALYTICS_SHOW_ALL_DISTRICTS;
+  analyticsRenderAll();
+}
+function setAnalyticsShowAll(checked){
+  ANALYTICS_SHOW_ALL_DISTRICTS=!!checked;
+  if(ANALYTICS_SHOW_ALL_DISTRICTS)ANALYTICS_FILTER_DISTRICT='';
+  document.querySelectorAll('.analyticsDistrictBtn').forEach(b=>b.classList.toggle('active',false));
   const sel=document.getElementById('analyticsDistrictSelect');if(sel)sel.value=ANALYTICS_FILTER_DISTRICT;
   analyticsRenderAll();
 }
@@ -1968,7 +1980,7 @@ async function renderAnalytics(){
       '<div class="analyticsBody">'+
         '<section class="analyticsMain">'+
           '<div class="analyticsTopArea">'+
-            '<div class="analyticsPanel analyticsDistrictPanel"><div class="analyticsPanelTitle"><h3>توزیع مدارس در ۸ ناحیه آموزش و پرورش مشهد</h3><small id="analyticsScopeCount">همه نواحی</small></div><div id="analyticsDistrictMap" class="analyticsMapStage"></div><div class="analyticsMapNote">مرز نواحی با مرجع نقشهٔ نواحی و با تطبیق موقعیت مدارس فعال ترسیم می‌شود؛ مرزهای مجاور روی یک خط مشترک قرار دارند و فضای خالی بین نواحی ایجاد نمی‌شود. آمار فقط مدارس و شرکت‌های فعال را شامل می‌شود.</div></div>'+
+            '<div class="analyticsPanel analyticsDistrictPanel"><div class="analyticsPanelTitle"><h3>توزیع مدارس در ۸ ناحیه آموزش و پرورش مشهد</h3><small id="analyticsScopeCount">همه نواحی</small></div><div id="analyticsDistrictMap" class="analyticsMapStage"></div><label class="analyticsAllDistrictsToggle"><input id="analyticsAllDistricts" type="checkbox" checked onchange="setAnalyticsShowAll(this.checked)"><span>تمام نواحی</span></label><div class="analyticsMapNote">مرز نواحی با مرجع نقشهٔ نواحی و با تطبیق موقعیت مدارس فعال ترسیم می‌شود؛ مرزهای مجاور روی یک خط مشترک قرار دارند و فضای خالی بین نواحی ایجاد نمی‌شود. آمار فقط مدارس و شرکت‌های فعال را شامل می‌شود.</div></div>'+
             '<div class="analyticsPanel analyticsChartPanel"><div class="analyticsPanelTitle"><h3>تعداد دانش‌آموزان به تفکیک مقطع تحصیلی</h3><small>ابتدایی / متوسطه</small></div><div id="analyticsLevelChart" class="analyticsBarChart"></div><div class="analyticsChartLegend"><span><i class="primary"></i>دبستان</span><span><i class="secondary"></i>دبیرستان / متوسطه</span></div></div>'+
             '<div class="analyticsPanel analyticsDonutPanel"><div class="analyticsPanelTitle"><h3>سهم مقاطع تحصیلی از کل دانش‌آموزان</h3><small>بر اساس اطلاعات مدارس</small></div><div id="analyticsDonutBox"></div></div>'+
           '</div>'+
