@@ -1,0 +1,25 @@
+name: inspect latest school data
+on:
+  push:
+    branches: [fix-student-school-counts-20261003]
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install openpyxl
+      - name: Inspect
+        run: |
+          python - <<'PY'
+          import openpyxl
+          xlsx='گزارش_تطبیق_دقیق_مدارس_و_شرکتها.xlsx'
+          wb=openpyxl.load_workbook(xlsx,data_only=True,read_only=True)
+          for ws in wb.worksheets:
+            print("SHEET",ws.title,"ROWS",ws.max_row,"MAXCOL",ws.max_column)
+            for i,r in enumerate(ws.iter_rows(values_only=True)):
+              if i>=10: break
+              print("ROW",i,[v for v in r])
+          PY
