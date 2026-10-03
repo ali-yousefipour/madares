@@ -81,7 +81,7 @@ jobs:
             dk='تبادکان' if 'تباد' in ws.title else re.search(r'\d+',ws.title).group()
             for r in rows[hi+1:]:
               if len(r)<=max(ni,si or 0) or not r[ni]:continue
-              excel.append({'name':str(r[ni]).strip(),'level':str(r[li] or '').strip(),'students':parse_num(r[si] if si is not None else 0),'company':str(r[ci] or '').strip(),'district':dk,'sheet':ws.title})
+              excel.append({'name':str(r[ni]).strip(),'level':str(r[li] or '').strip(),'students':(int(float(r[si])) if si is not None and isinstance(r[si],(int,float)) else parse_num(r[si] if si is not None else 0)),'company':str(r[ci] or '').strip(),'district':dk,'sheet':ws.title})
           print('SHEET_TOTALS', {k:sum(e['students'] for e in excel if e['sheet']==k) for k in sorted(set(e['sheet'] for e in excel))})
           bad=[]
           for ws in wb.worksheets:
